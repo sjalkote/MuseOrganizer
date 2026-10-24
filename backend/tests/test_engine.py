@@ -72,3 +72,19 @@ def test_api_group_view_never_shows_private_values():
     group = c.post(f"/sessions/{sid}/run").json()
     assert "612" not in " ".join(m["text"] for m in group)
     assert c.get(f"/sessions/{sid}/private/zzz").status_code == 404
+
+
+def test_api_join_and_member_post():
+    c = TestClient(api.app)
+    sid = c.post("/sessions", json={"template": "car"}).json()["id"]
+    j = c.post(f"/sessions/{sid}/join", json={"name": "Sam"}).json()
+    assert j["members"][j["member_id"]] == "Sam" and j["title"] == "Family Toyota"
+    group = c.post(f"/sessions/{sid}/group/{j['member_id']}", json={"text": "hi all"}).json()
+    assert group[-1] == {"author": j["member_id"], "text": "hi all", "cards": []}
+
+
+def test_rerun_without_changes_does_not_repost():
+    s = family()
+    engine.run(s)
+    engine.run(s)
+    assert len(s.group) == 1 and len(s.threads["mom"]) == 1

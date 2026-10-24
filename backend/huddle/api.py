@@ -2,6 +2,8 @@
 
 ponytail: in-memory sessions and no auth (member_id is trusted); Supabase + auth come in milestone 4.
 """
+import uuid
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -20,7 +22,11 @@ class Member(BaseModel):
 class NewSession(BaseModel):
     template: str
     context: dict[str, str] = {}
-    members: list[Member]
+    members: list[Member] = []
+
+
+class Join(BaseModel):
+    name: str
 
 
 class Text(BaseModel):
@@ -42,11 +48,35 @@ def _member(s, mid):
 def create(body: NewSession):
     if body.template not in TEMPLATES:
         raise HTTPException(400, f"unknown template; choose from {list(TEMPLATES)}")
-    s = engine.Session(TEMPLATES[body.template], body.context)
+    s = engine.Session(TEMPLATES[body.template], {"location": "Austin, TX", **body.context})
     for m in body.members:
         s.add_member(m.id, m.name)
     SESSIONS[s.id] = s
-    return {"id": s.id, "members": s.members}
+    return info(s.id)
+
+
+@app.get("/sessions/{sid}")
+def info(sid: str):
+    s = _get(sid)
+    return {"id": s.id, "template": s.template["id"], "title": s.template["title"],
+            "context": s.context, "members": s.members}
+
+
+@app.post("/sessions/{sid}/join")
+def join(sid: str, body: Join):
+    """The session id doubles as the invite code."""
+    s = _get(sid)
+    mid = uuid.uuid4().hex[:8]
+    s.add_member(mid, body.name.strip()[:40] or "Guest")
+    return {"member_id": mid, **info(sid)}
+
+
+@app.post("/sessions/{sid}/group/{mid}")
+def say(sid: str, mid: str, body: Text):
+    s = _get(sid)
+    _member(s, mid)
+    s.post_group(body.text, author=mid)
+    return s.group
 
 
 @app.get("/sessions/{sid}/group")

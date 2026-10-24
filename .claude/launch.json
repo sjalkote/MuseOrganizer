@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "huddle-backend",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--directory", "backend", "uvicorn", "huddle.api:app", "--port", "8000", "--reload"],
+      "port": 8000,
+      "url": "http://127.0.0.1:8000"
+    }
+  ]
+}

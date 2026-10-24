@@ -202,7 +202,10 @@ def run(s, top_n=3):
     enrich(s, top)
     facts = [{k: o[k] for k in t["explain_fields"] if k in o} for o in top]
     text = safe_explain({"options": facts, "assumptions": t.get("assumptions", {})}, draft)
-    s.post_group(text, cards=[{"type": t["card"], "option": o} for o in top])
+    def key(opts):
+        return [(o["name"], o["fits_all"]) for o in opts]
+    if key(s.top) != key(top):  # re-running with nothing changed doesn't repost
+        s.post_group(text, cards=[{"type": t["card"], "option": o} for o in top])
     s.top = top
     return top
 
@@ -245,7 +248,8 @@ def _ask_privately(s, best, misses):
             if violations(best, {f["key"]: mine[f["key"]]}, [f]):
                 v = best[f["attr"]]
                 actual = "" if f["op"] == "requires" else f"; it's {'$' if f['type'] == 'money' else ''}{v:,}"
-                s.say_private(mid, "muse",
-                              f"Only you can see this: the {best['name']} breaks your limit "
-                              f"({_fmt(f, mine[f['key']])}{actual}). "
-                              "Would you be open to it, or should I keep looking?")
+                ask = (f"Only you can see this: the {best['name']} breaks your limit "
+                       f"({_fmt(f, mine[f['key']])}{actual}). "
+                       "Would you be open to it, or should I keep looking?")
+                if all(m["text"] != ask for m in s.threads[mid]):
+                    s.say_private(mid, "muse", ask)
