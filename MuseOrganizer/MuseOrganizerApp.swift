@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct MuseOrganizerApp: App {
+    @State private var model = AppModel()
+
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            ContentView()
+                .environment(model)
+                .tint(Palette.accent)
         }
     }
 }
