@@ -25,6 +25,7 @@ class Session:
     threads: dict = field(default_factory=dict)     # member_id -> [message]
     group: list = field(default_factory=list)       # [message]
     found: dict = field(default_factory=dict)       # session-level search results (dealers, ...)
+    top: list = field(default_factory=list)         # options last posted to the group
 
     @property
     def schema(self):
@@ -202,7 +203,19 @@ def run(s, top_n=3):
     facts = [{k: o[k] for k in t["explain_fields"] if k in o} for o in top]
     text = safe_explain({"options": facts, "assumptions": t.get("assumptions", {})}, draft)
     s.post_group(text, cards=[{"type": t["card"], "option": o} for o in top])
+    s.top = top
     return top
+
+
+def explain_option(s, mid, name):
+    """Template's explainer for one posted option, personalized with this member's own values, sent privately."""
+    o = next((o for o in s.top if o["name"] == name), None)
+    if o is None:
+        raise KeyError(name)
+    facts, draft = s.template["explain"](o, s.private[mid])
+    text = safe_explain(facts, draft)
+    s.say_private(mid, "muse", text)
+    return text
 
 
 def _compromise(s, options, limits):

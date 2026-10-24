@@ -27,6 +27,9 @@ def show(s):
             o = c["option"]
             print(f"    [{o['name']}] ${o['msrp']:,} MSRP, ~${o['est_monthly']}/mo, {o['seats']} seats, "
                   f"{o['mpg']} mpg, score {o['score']}{'' if o['fits_all'] else ' (compromise)'}")
+            f = o["finance"]
+            print(f"      lease ${f['lease']['monthly']}/mo | finance ${f['finance']['monthly']}/mo | "
+                  f"cash ${f['cash']['upfront']:,} | cheapest over {f['months']} mo: {f['best']}")
             for li in o.get("listings", [])[:1]:
                 print(f"      listing: {li['title']}")
     for d in s.found.get("dealers", []):
@@ -45,7 +48,8 @@ def main():
         if args.conflict and mid == "mom":
             text = text.replace("$800", "$650")
         engine.private_message(s, mid, text)
-    engine.run(s)
+    top = engine.run(s)
+    engine.explain_option(s, "mom", top[0]["name"])
     show(s)
 
 

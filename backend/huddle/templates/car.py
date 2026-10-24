@@ -2,7 +2,9 @@
 from .. import finance
 
 # Public assumptions shown on every card. ponytail: fixed rates, pull live Toyota offers via SerpApi later.
-ASSUME = {"apr": 0.065, "months": 60, "down_pct": 0.10, "tax_pct": 0.0625}
+ASSUME = {"apr": 0.065, "months": 60, "down_pct": 0.10, "tax_pct": 0.0625,
+          "lease_months": 36, "residual_pct": 0.60, "money_factor": 0.0025, "lease_fees": 650}
+PLAN_NAMES = {"cash": "paying cash", "finance": "financing", "lease": "leasing"}
 
 # Approximate 2025 base-trim MSRP / combined MPG / max seats / cargo behind 2nd row (cu ft).
 # awd = AWD or 4WD available on some trim.
@@ -22,10 +24,31 @@ CATALOG = [
 
 
 def prepare(option, context):
-    a = ASSUME
-    financed = option["msrp"] * (1 + a["tax_pct"]) * (1 - a["down_pct"])
-    option["est_monthly"] = round(finance.monthly_payment(financed, a["apr"], a["months"]))
+    option["finance"] = finance.compare(option["msrp"], **ASSUME)
+    option["est_monthly"] = option["finance"]["finance"]["monthly"]
     return option
+
+
+def explain(option, mine):
+    """Facts + plain-language draft for one member's private lease/buy/finance explanation."""
+    f = option["finance"]
+    c, fi, le = f["cash"], f["finance"], f["lease"]
+    draft = (
+        f"For the {option['name']} over {f['months']} months: "
+        f"Leasing is about ${le['monthly']:,}/mo and you hand the car back at the end, so you keep $0 of it. "
+        f"Financing is about ${fi['monthly']:,}/mo after ${fi['upfront']:,} down; after {f['months']} months "
+        f"you'd own about ${fi['equity']:,} of the car, and you'd pay ${fi['interest']:,} in interest along the way. "
+        f"Paying cash is ${c['upfront']:,} up front with no interest. "
+        f"Counting what you keep, {PLAN_NAMES[f['best']]} costs the least."
+    )
+    cap = mine.get("max_monthly")
+    if cap:
+        fits = [PLAN_NAMES[k] for k in ("lease", "finance") if f[k]["monthly"] <= cap]
+        verdict = {0: "neither monthly plan fits.", 1: f"{fits[0] if fits else ''} fits.",
+                   2: "both leasing and financing fit."}[len(fits)]
+        draft += f" Against your ${cap:,.0f}/mo limit, {verdict}"
+    facts = {"car": option["name"], "plans": f, "assumptions": ASSUME, "your_max_monthly": cap}
+    return facts, draft
 
 
 TEMPLATE = {
@@ -35,6 +58,7 @@ TEMPLATE = {
     "card": "car",
     "catalog": CATALOG,
     "prepare": prepare,
+    "explain": explain,
     "assumptions": ASSUME,
     # op "<=": option[attr] must be <= the strictest member value (min); ">=": max; "requires": any member.
     "constraint_schema": [

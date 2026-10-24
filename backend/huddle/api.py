@@ -72,6 +72,17 @@ def tell(sid: str, mid: str, body: Text):
     return s.threads[mid]
 
 
+@app.post("/sessions/{sid}/private/{mid}/explain/{option}")
+def explain(sid: str, mid: str, option: str):
+    s = _get(sid)
+    _member(s, mid)
+    try:
+        engine.explain_option(s, mid, option)
+    except KeyError:
+        raise HTTPException(404, "option not in the current results")
+    return s.threads[mid]
+
+
 @app.post("/sessions/{sid}/run")
 def run(sid: str):
     s = _get(sid)
