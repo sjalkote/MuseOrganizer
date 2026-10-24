@@ -1,0 +1,777 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1497F946D0819899FA097381 /* ActivitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */; };
+		18D46B03400959251258E5CB /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13289BA8D1B2235C06491E /* ConnectionsView.swift */; };
+		1FFF30404C63C530EADADFA2 /* HuddleShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D48B951487C4A8F4523AD17D /* HuddleShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		23AE019ACBAAA5612C86F687 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
+		30D6D87778C997FEF6104960 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143E90EC06CE7F1624E951BB /* Components.swift */; };
+		396A8EF2FFF3E67539FABA4E /* Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A0D81D7081997147A0B62F /* Workspace.swift */; };
+		432D63FB6F0BCF058D3AF59E /* WorkspaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */; };
+		5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E7484E60D9C03DD7B18D4E /* PlansView.swift */; };
+		64F57F92F1AEC85E6788895B /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379E4D9C420168A138CCD996 /* MockData.swift */; };
+		6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068BC743F0D15D2C30A3190F /* NewPlanSheet.swift */; };
+		7172FF5DAB27D887DFCAF40D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */; };
+		76A822D88C10CE0DE472B3CC /* PlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70DB825BAC5B7DEAD922194 /* PlanStore.swift */; };
+		7D1AEA3AAEF158F510E4B21B /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA8FC6E9A17DBEA60BF416C /* PlanView.swift */; };
+		81822825091575FB6D304D4C /* MessagesRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CBB734EF692EA1AB0287755 /* MessagesRootView.swift */; };
+		8536EDFCF27FAF53EDE91265 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
+		890AAB9FE1BBE4C365A9C67A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C6EE26839EA899A5DDD02345 /* Assets.xcassets */; };
+		9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D618C8271DE9E39BB5A01C4 /* HomeView.swift */; };
+		A250955421281AD21BDBB3C3 /* HuddleMessages.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 155D68F10F774301D0AD1EF4 /* HuddleMessages.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A537FE9CC09393F3274D3EAF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
+		A5F1F6F3C4532EE746B78047 /* TripPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 958A8B86BAA23A6D2816901E /* TripPlanView.swift */; };
+		A70006B21984CE7BB2F24709 /* SharedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2313CBD60FF4002349EBB7 /* SharedView.swift */; };
+		A88A23676789154F7414224B /* PlanFolderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856D11ED201740E1135886CE /* PlanFolderPanel.swift */; };
+		AAB8A2775ADDF8236ADC33C4 /* BuildFolderSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */; };
+		B16C314AF84582BC56DA2EB6 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
+		C7D7D77046747A40051A0A50 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B867A1464B3924BC752DED9 /* ThreadView.swift */; };
+		CD5FB35D8D7FEABFB27C2E93 /* ChatBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAC66336F707981247D5FF6 /* ChatBridge.swift */; };
+		D6D8E6D0F5A9A0BADD10A5F9 /* CarPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */; };
+		D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706C916B4B32C9C603D997D6 /* FolderView.swift */; };
+		DDDD81B89027C14389DA9EB5 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
+		E09CD119AEF87D7F4864BCD6 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0053CAD8678923CF76C0C5 /* ShareViewController.swift */; };
+		E19435ACFF7266CC571962AC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27A60E7C5C290FA4FF45A19C /* Models.swift */; };
+		EF477B4B35643D0C43948362 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
+		EF9892CE6140DECDF4C97F12 /* MuseOrganizerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B62779B37BDB97883B3B52 /* MuseOrganizerApp.swift */; };
+		F2487DE4C67E663DF5F70A74 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF09F1835B3C85D8B9BC8C65 /* MessagesViewController.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B8DC32AC8639872236AF5DB1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C2EFC1F3D2A8BC2BC1F5F721 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 25425DD204F605FA85B59D9C;
+			remoteInfo = HuddleMessages;
+		};
+		CE245997A8B650352AF9FF50 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C2EFC1F3D2A8BC2BC1F5F721 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 20EA0D9AC97CAA452F264501;
+			remoteInfo = HuddleShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		085B6122F9470C78689F730E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A250955421281AD21BDBB3C3 /* HuddleMessages.appex in Embed Foundation Extensions */,
+				1FFF30404C63C530EADADFA2 /* HuddleShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		068BC743F0D15D2C30A3190F /* NewPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPlanSheet.swift; sourceTree = "<group>"; };
+		143E90EC06CE7F1624E951BB /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		155D68F10F774301D0AD1EF4 /* HuddleMessages.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HuddleMessages.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1CBB734EF692EA1AB0287755 /* MessagesRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesRootView.swift; sourceTree = "<group>"; };
+		27A60E7C5C290FA4FF45A19C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		2A0053CAD8678923CF76C0C5 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		3245450D1D959FC4561A433C /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		379E4D9C420168A138CCD996 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
+		43B62779B37BDB97883B3B52 /* MuseOrganizerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseOrganizerApp.swift; sourceTree = "<group>"; };
+		48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceService.swift; sourceTree = "<group>"; };
+		5B867A1464B3924BC752DED9 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
+		5D618C8271DE9E39BB5A01C4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		6AAC66336F707981247D5FF6 /* ChatBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBridge.swift; sourceTree = "<group>"; };
+		706C916B4B32C9C603D997D6 /* FolderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderView.swift; sourceTree = "<group>"; };
+		744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlanView.swift; sourceTree = "<group>"; };
+		7C13289BA8D1B2235C06491E /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsView.swift; sourceTree = "<group>"; };
+		84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildFolderSheet.swift; sourceTree = "<group>"; };
+		856D11ED201740E1135886CE /* PlanFolderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanFolderPanel.swift; sourceTree = "<group>"; };
+		90E7484E60D9C03DD7B18D4E /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
+		958A8B86BAA23A6D2816901E /* TripPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlanView.swift; sourceTree = "<group>"; };
+		B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySheet.swift; sourceTree = "<group>"; };
+		BEA1A4A66AD5C560925CE8E4 /* MuseOrganizer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MuseOrganizer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6EE26839EA899A5DDD02345 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C70DB825BAC5B7DEAD922194 /* PlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanStore.swift; sourceTree = "<group>"; };
+		CCA8FC6E9A17DBEA60BF416C /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
+		D0A0D81D7081997147A0B62F /* Workspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workspace.swift; sourceTree = "<group>"; };
+		D48B951487C4A8F4523AD17D /* HuddleShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HuddleShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		EF09F1835B3C85D8B9BC8C65 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
+		F9C8C4C90DE0394012083C0D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		FD2313CBD60FF4002349EBB7 /* SharedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		17932AB071BBEBD9A72B7D97 /* Activity */ = {
+			isa = PBXGroup;
+			children = (
+				B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */,
+			);
+			path = Activity;
+			sourceTree = "<group>";
+		};
+		37F1957BE0A135AB89C223B1 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				FD2313CBD60FF4002349EBB7 /* SharedView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		3C7DF7FC955E562902878378 /* Plan */ = {
+			isa = PBXGroup;
+			children = (
+				744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */,
+				CCA8FC6E9A17DBEA60BF416C /* PlanView.swift */,
+				958A8B86BAA23A6D2816901E /* TripPlanView.swift */,
+			);
+			path = Plan;
+			sourceTree = "<group>";
+		};
+		4121747485D8112CD986FA99 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				17932AB071BBEBD9A72B7D97 /* Activity */,
+				4BDD7CADFA27769F3193007A /* Connections */,
+				CEFE14CE9968314AC094BD09 /* Home */,
+				6DD5FC9B58CD70EB8004ABC7 /* NewPlan */,
+				3C7DF7FC955E562902878378 /* Plan */,
+				BFD489B25CF37BD7D9E64F2E /* Plans */,
+				37F1957BE0A135AB89C223B1 /* Shared */,
+				D4E01749D45056CBD9AE9BA8 /* Thread */,
+				CB3694A2446E84259165EE4F /* Workspace */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		4A4016D33E4718354C65C463 /* MuseOrganizer */ = {
+			isa = PBXGroup;
+			children = (
+				C6EE26839EA899A5DDD02345 /* Assets.xcassets */,
+				ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */,
+				43B62779B37BDB97883B3B52 /* MuseOrganizerApp.swift */,
+				59A19D7456B8CFA21B1BFB71 /* DesignSystem */,
+				4121747485D8112CD986FA99 /* Features */,
+				CEA1BF7A63D69A22286D7608 /* Integrations */,
+				F97B8A6E1EA3F8100503405C /* Models */,
+			);
+			path = MuseOrganizer;
+			sourceTree = "<group>";
+		};
+		4BDD7CADFA27769F3193007A /* Connections */ = {
+			isa = PBXGroup;
+			children = (
+				7C13289BA8D1B2235C06491E /* ConnectionsView.swift */,
+			);
+			path = Connections;
+			sourceTree = "<group>";
+		};
+		59A19D7456B8CFA21B1BFB71 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				143E90EC06CE7F1624E951BB /* Components.swift */,
+				F9C8C4C90DE0394012083C0D /* Theme.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		6BED68BAA7A018AA7A774FC2 /* HuddleMessages */ = {
+			isa = PBXGroup;
+			children = (
+				1CBB734EF692EA1AB0287755 /* MessagesRootView.swift */,
+				EF09F1835B3C85D8B9BC8C65 /* MessagesViewController.swift */,
+			);
+			path = HuddleMessages;
+			sourceTree = "<group>";
+		};
+		6DD5FC9B58CD70EB8004ABC7 /* NewPlan */ = {
+			isa = PBXGroup;
+			children = (
+				068BC743F0D15D2C30A3190F /* NewPlanSheet.swift */,
+			);
+			path = NewPlan;
+			sourceTree = "<group>";
+		};
+		7C06BAF9B1055A75760686F1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				155D68F10F774301D0AD1EF4 /* HuddleMessages.appex */,
+				D48B951487C4A8F4523AD17D /* HuddleShare.appex */,
+				BEA1A4A66AD5C560925CE8E4 /* MuseOrganizer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B1BDDE7F3F8881F0FD54A447 /* HuddleShare */ = {
+			isa = PBXGroup;
+			children = (
+				2A0053CAD8678923CF76C0C5 /* ShareViewController.swift */,
+			);
+			path = HuddleShare;
+			sourceTree = "<group>";
+		};
+		BFD489B25CF37BD7D9E64F2E /* Plans */ = {
+			isa = PBXGroup;
+			children = (
+				90E7484E60D9C03DD7B18D4E /* PlansView.swift */,
+			);
+			path = Plans;
+			sourceTree = "<group>";
+		};
+		C3140B7ECC6B051D6A0985C6 = {
+			isa = PBXGroup;
+			children = (
+				6BED68BAA7A018AA7A774FC2 /* HuddleMessages */,
+				B1BDDE7F3F8881F0FD54A447 /* HuddleShare */,
+				4A4016D33E4718354C65C463 /* MuseOrganizer */,
+				F9546E70B8E1B5757D8BD4F8 /* Shared */,
+				7C06BAF9B1055A75760686F1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CB3694A2446E84259165EE4F /* Workspace */ = {
+			isa = PBXGroup;
+			children = (
+				84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */,
+				706C916B4B32C9C603D997D6 /* FolderView.swift */,
+				856D11ED201740E1135886CE /* PlanFolderPanel.swift */,
+			);
+			path = Workspace;
+			sourceTree = "<group>";
+		};
+		CEA1BF7A63D69A22286D7608 /* Integrations */ = {
+			isa = PBXGroup;
+			children = (
+				6AAC66336F707981247D5FF6 /* ChatBridge.swift */,
+				48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */,
+			);
+			path = Integrations;
+			sourceTree = "<group>";
+		};
+		CEFE14CE9968314AC094BD09 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				5D618C8271DE9E39BB5A01C4 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		D4E01749D45056CBD9AE9BA8 /* Thread */ = {
+			isa = PBXGroup;
+			children = (
+				5B867A1464B3924BC752DED9 /* ThreadView.swift */,
+			);
+			path = Thread;
+			sourceTree = "<group>";
+		};
+		F9546E70B8E1B5757D8BD4F8 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				3245450D1D959FC4561A433C /* SharedStore.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		F97B8A6E1EA3F8100503405C /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				379E4D9C420168A138CCD996 /* MockData.swift */,
+				27A60E7C5C290FA4FF45A19C /* Models.swift */,
+				C70DB825BAC5B7DEAD922194 /* PlanStore.swift */,
+				D0A0D81D7081997147A0B62F /* Workspace.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		20EA0D9AC97CAA452F264501 /* HuddleShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8C391328F0F04C5B5EB021C0 /* Build configuration list for PBXNativeTarget "HuddleShare" */;
+			buildPhases = (
+				351BE69789CBC58BCD129EC0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HuddleShare;
+			packageProductDependencies = (
+			);
+			productName = HuddleShare;
+			productReference = D48B951487C4A8F4523AD17D /* HuddleShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		25425DD204F605FA85B59D9C /* HuddleMessages */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 67743017865F0AB00BC5353E /* Build configuration list for PBXNativeTarget "HuddleMessages" */;
+			buildPhases = (
+				3CB2691AECF6EC35448B8579 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HuddleMessages;
+			packageProductDependencies = (
+			);
+			productName = HuddleMessages;
+			productReference = 155D68F10F774301D0AD1EF4 /* HuddleMessages.appex */;
+			productType = "com.apple.product-type.app-extension.messages";
+		};
+		F643CC16035776CE0D409B19 /* MuseOrganizer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6BFFFCA66E801DE534111E09 /* Build configuration list for PBXNativeTarget "MuseOrganizer" */;
+			buildPhases = (
+				9EBD1181378162B6A1208498 /* Sources */,
+				DA08F55F84AD48D9C22F5CFB /* Resources */,
+				085B6122F9470C78689F730E /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9469E2AA5582DAEA49E4F947 /* PBXTargetDependency */,
+				94AF6D7220732EEB2723AC86 /* PBXTargetDependency */,
+			);
+			name = MuseOrganizer;
+			packageProductDependencies = (
+			);
+			productName = MuseOrganizer;
+			productReference = BEA1A4A66AD5C560925CE8E4 /* MuseOrganizer.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C2EFC1F3D2A8BC2BC1F5F721 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					20EA0D9AC97CAA452F264501 = {
+						DevelopmentTeam = 7K6CXFJBDB;
+						ProvisioningStyle = Automatic;
+					};
+					25425DD204F605FA85B59D9C = {
+						DevelopmentTeam = 7K6CXFJBDB;
+						ProvisioningStyle = Automatic;
+					};
+					F643CC16035776CE0D409B19 = {
+						DevelopmentTeam = 7K6CXFJBDB;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 38C868322D05CE3FDD2FE637 /* Build configuration list for PBXProject "MuseOrganizer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C3140B7ECC6B051D6A0985C6;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7C06BAF9B1055A75760686F1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F643CC16035776CE0D409B19 /* MuseOrganizer */,
+				25425DD204F605FA85B59D9C /* HuddleMessages */,
+				20EA0D9AC97CAA452F264501 /* HuddleShare */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DA08F55F84AD48D9C22F5CFB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				890AAB9FE1BBE4C365A9C67A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		351BE69789CBC58BCD129EC0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E09CD119AEF87D7F4864BCD6 /* ShareViewController.swift in Sources */,
+				B16C314AF84582BC56DA2EB6 /* SharedStore.swift in Sources */,
+				23AE019ACBAAA5612C86F687 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3CB2691AECF6EC35448B8579 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				81822825091575FB6D304D4C /* MessagesRootView.swift in Sources */,
+				F2487DE4C67E663DF5F70A74 /* MessagesViewController.swift in Sources */,
+				8536EDFCF27FAF53EDE91265 /* SharedStore.swift in Sources */,
+				A537FE9CC09393F3274D3EAF /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EBD1181378162B6A1208498 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1497F946D0819899FA097381 /* ActivitySheet.swift in Sources */,
+				AAB8A2775ADDF8236ADC33C4 /* BuildFolderSheet.swift in Sources */,
+				D6D8E6D0F5A9A0BADD10A5F9 /* CarPlanView.swift in Sources */,
+				CD5FB35D8D7FEABFB27C2E93 /* ChatBridge.swift in Sources */,
+				30D6D87778C997FEF6104960 /* Components.swift in Sources */,
+				18D46B03400959251258E5CB /* ConnectionsView.swift in Sources */,
+				7172FF5DAB27D887DFCAF40D /* ContentView.swift in Sources */,
+				D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */,
+				9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */,
+				64F57F92F1AEC85E6788895B /* MockData.swift in Sources */,
+				E19435ACFF7266CC571962AC /* Models.swift in Sources */,
+				EF9892CE6140DECDF4C97F12 /* MuseOrganizerApp.swift in Sources */,
+				6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */,
+				A88A23676789154F7414224B /* PlanFolderPanel.swift in Sources */,
+				76A822D88C10CE0DE472B3CC /* PlanStore.swift in Sources */,
+				7D1AEA3AAEF158F510E4B21B /* PlanView.swift in Sources */,
+				5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */,
+				DDDD81B89027C14389DA9EB5 /* SharedStore.swift in Sources */,
+				A70006B21984CE7BB2F24709 /* SharedView.swift in Sources */,
+				EF477B4B35643D0C43948362 /* Theme.swift in Sources */,
+				C7D7D77046747A40051A0A50 /* ThreadView.swift in Sources */,
+				A5F1F6F3C4532EE746B78047 /* TripPlanView.swift in Sources */,
+				396A8EF2FFF3E67539FABA4E /* Workspace.swift in Sources */,
+				432D63FB6F0BCF058D3AF59E /* WorkspaceService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9469E2AA5582DAEA49E4F947 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 25425DD204F605FA85B59D9C /* HuddleMessages */;
+			targetProxy = B8DC32AC8639872236AF5DB1 /* PBXContainerItemProxy */;
+		};
+		94AF6D7220732EEB2723AC86 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 20EA0D9AC97CAA452F264501 /* HuddleShare */;
+			targetProxy = CE245997A8B650352AF9FF50 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		071CD3E9E2FF068504348E00 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/HuddleShare.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = "Config/HuddleShare-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer.Share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		175DC7A73A6B18959EBA177B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7K6CXFJBDB;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		423223F77CE4088923E397A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = Config/HuddleMessages.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = "Config/HuddleMessages-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer.Messages;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		630B892A708C419044DB59AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7K6CXFJBDB;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		942B2A635D9C74896A65B7F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iMessage App Icon";
+				CODE_SIGN_ENTITLEMENTS = Config/HuddleMessages.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = "Config/HuddleMessages-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer.Messages;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D2027ABAB2D8C6C474B2D118 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Config/HuddleShare.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = "Config/HuddleShare-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer.Share;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EC1FBA60DD88C3F41F05B76D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/MuseOrganizer.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Huddle-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Huddle;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer;
+				PRODUCT_NAME = MuseOrganizer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F1D4CFD563B17F229AF5C1EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Config/MuseOrganizer.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Huddle-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Huddle;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sjalkote.MuseOrganizer;
+				PRODUCT_NAME = MuseOrganizer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		38C868322D05CE3FDD2FE637 /* Build configuration list for PBXProject "MuseOrganizer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				175DC7A73A6B18959EBA177B /* Debug */,
+				630B892A708C419044DB59AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		67743017865F0AB00BC5353E /* Build configuration list for PBXNativeTarget "HuddleMessages" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				423223F77CE4088923E397A5 /* Debug */,
+				942B2A635D9C74896A65B7F9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6BFFFCA66E801DE534111E09 /* Build configuration list for PBXNativeTarget "MuseOrganizer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC1FBA60DD88C3F41F05B76D /* Debug */,
+				F1D4CFD563B17F229AF5C1EF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8C391328F0F04C5B5EB021C0 /* Build configuration list for PBXNativeTarget "HuddleShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D2027ABAB2D8C6C474B2D118 /* Debug */,
+				071CD3E9E2FF068504348E00 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C2EFC1F3D2A8BC2BC1F5F721 /* Project object */;
+}

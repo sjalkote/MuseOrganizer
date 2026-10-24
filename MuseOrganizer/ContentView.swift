@@ -8,17 +8,32 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        @Bindable var model = model
+        TabView(selection: $model.tab) {
+            Tab("Home", systemImage: "house", value: AppModel.AppTab.home) {
+                HomeView()
+            }
+            Tab("Plans", systemImage: "square.stack", value: AppModel.AppTab.plans) {
+                PlansView()
+            }
+            Tab("Shared", systemImage: "tray.and.arrow.down", value: AppModel.AppTab.shared) {
+                SharedView()
+            }
+            .badge(model.pendingShared.count)
+            Tab("Apps", systemImage: "link", value: AppModel.AppTab.apps) {
+                ConnectionsView()
+            }
         }
-        .padding()
+        .onOpenURL { model.handle($0) }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            model.reloadShared()
+        }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView().environment(AppModel())
 }
