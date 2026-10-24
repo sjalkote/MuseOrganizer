@@ -12,27 +12,10 @@ struct FolderView: View {
                 if let ws = plan.workspace {
                     VStack(alignment: .leading, spacing: Space.m) {
                         header(ws)
-                        Panel(padding: 0) {
-                            ForEach(Array(ws.files.enumerated()), id: \.element.id) { i, file in
-                                NavigationLink(value: file) {
-                                    HStack(spacing: Space.m) {
-                                        TintTile(symbol: file.kind.symbol, tint: file.kind.tint, size: 40)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(file.name).font(.bodyStrong).foregroundStyle(Palette.ink)
-                                            Text(file.summary).font(.small).foregroundStyle(Palette.inkSecondary)
-                                            if !file.sources.isEmpty {
-                                                Text("From " + file.sources.joined(separator: ", "))
-                                                    .font(.small).foregroundStyle(Palette.inkSecondary)
-                                            }
-                                        }
-                                        Spacer(minLength: Space.s)
-                                        Image(systemName: "chevron.right").font(.small).foregroundStyle(Palette.inkFaint)
-                                    }
-                                    .padding(Space.m)
-                                    .contentShape(.rect)
-                                }
-                                .buttonStyle(.pressable)
-                                if i < ws.files.count - 1 { Hairline(inset: 72) }
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.s), GridItem(.flexible(), spacing: Space.s)], spacing: Space.s) {
+                            ForEach(ws.files) { file in
+                                NavigationLink(value: file) { DriveFileCard(file: file) }
+                                    .buttonStyle(.pressable)
                             }
                         }
                         sourcesPanel(ws)
@@ -68,7 +51,7 @@ struct FolderView: View {
             HStack(spacing: Space.m) {
                 TintTile(symbol: "folder.fill", tint: .stays, size: 56)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Google Drive › Huddle").font(.small).foregroundStyle(Palette.inkSecondary)
+                    Text("My Drive ›").font(.small).foregroundStyle(Palette.inkSecondary)
                     Text(ws.folderName).font(.heading).foregroundStyle(Palette.ink)
                     Text("\(ws.files.count) files · built \(ws.builtAt.formatted(.relative(presentation: .named)))")
                         .font(.small).foregroundStyle(Palette.inkSecondary)
@@ -106,6 +89,50 @@ struct FolderView: View {
                 .accessibilityElement(children: .combine)
             }
         }
+    }
+}
+
+/// File tile in the style of Drive's grid view: name bar on top, big type icon below.
+private struct DriveFileCard: View {
+    var file: WorkspaceFile
+
+    private var color: Color {
+        switch file.kind {
+        case .sheet: Color(hex: 0x1E8E3E)
+        case .doc: Color(hex: 0x4285F4)
+        case .folder: Color(hex: 0x5F6368)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: Space.s) {
+                Image(systemName: file.kind.symbol)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 20, height: 20)
+                    .background(color, in: .rect(cornerRadius: 4))
+                Text(file.name).font(.smallStrong).foregroundStyle(Palette.ink).lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "ellipsis").rotationEffect(.degrees(90)).font(.caption).foregroundStyle(Palette.inkSecondary)
+            }
+            .padding(.horizontal, Space.s + 2)
+            .frame(height: 44)
+            ZStack {
+                Palette.panel
+                Image(systemName: file.kind.symbol)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(color, in: .rect(cornerRadius: 12, style: .continuous))
+            }
+            .frame(height: 112)
+            .clipShape(.rect(cornerRadius: Radius.s, style: .continuous))
+            .padding([.horizontal, .bottom], Space.xs + 2)
+        }
+        .background(Color(light: 0xEEF2F8, dark: 0x26292E), in: .rect(cornerRadius: Radius.m, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(file.name), \(file.kind.label)")
     }
 }
 

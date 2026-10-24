@@ -87,7 +87,7 @@ extension Mock {
     // MARK: Trip
 
     static let tripBlueprint = WorkspaceBlueprint(
-        folderName: "Japan Trip 2027",
+        folderName: "Japan 2027",
         calls: [
             ResearchCall(engine: "google_flights", query: "AUS → HND, Mar 26 – Apr 4, 4 adults", result: "14 itineraries", duration: 2.1),
             ResearchCall(engine: "google_hotels", query: "Shinjuku, Mar 26 – 30, 2 rooms", result: "22 properties", duration: 1.8),
@@ -95,11 +95,10 @@ extension Mock {
             ResearchCall(engine: "google_maps", query: "best ramen and izakaya, Shinjuku", result: "20 places", duration: 1.3),
             ResearchCall(engine: "google_maps", query: "top things to do, Kyoto", result: "20 places", duration: 1.2),
             ResearchCall(engine: "google", query: "Shinkansen Tokyo to Kyoto fare", result: "10 results", duration: 0.9),
-            ResearchCall(engine: "google", query: "Japan entry requirements for US citizens", result: "8 results", duration: 0.8),
         ],
         files: [
             WorkspaceFile(
-                name: "Budget", kind: .sheet, summary: "7 rows · per person and group totals",
+                name: "Budget Tracker", kind: .sheet, summary: "Per person and group totals",
                 sources: ["Google Flights", "Google Hotels", "Google Maps"],
                 content: .sheet(
                     columns: ["Item", "Per person", "Group of 4", "Source"],
@@ -116,10 +115,10 @@ extension Mock {
                 )
             ),
             WorkspaceFile(
-                name: "Itinerary", kind: .doc, summary: "9 days · times, places, bookings",
+                name: "Daily", kind: .doc, summary: "Day-by-day plan with times",
                 sources: ["Google Flights", "Google Maps"],
                 content: .doc([
-                    .title("Japan Trip 2027"),
+                    .title("Japan 2027 · Daily plan"),
                     .paragraph("Mar 26 – Apr 4 · Devin, Sam, Maya, Jordan"),
                     .heading("Day 1 · Thu, Mar 26 · Tokyo"),
                     .bullet("3:40 PM  Land at Haneda, ANA NH 107, Terminal 3"),
@@ -135,50 +134,21 @@ extension Mock {
                 ])
             ),
             WorkspaceFile(
-                name: "Flights and stays", kind: .sheet, summary: "Every option the group compared",
-                sources: ["Google Flights", "Google Hotels"],
-                content: .sheet(
-                    columns: ["Option", "Price", "Votes", "Why"],
-                    rows: [
-                        ["ANA via LAX", "$1,148", "4", "Picked · cheapest sane layover"],
-                        ["JAL via DFW", "$1,312", "1", "Fastest, lands at Narita"],
-                        ["United via SFO", "$1,089", "0", "Leaves a day late"],
-                        ["Hotel Gracery Shinjuku", "$168/night", "4", "Picked · central"],
-                        ["Kyoto Machiya House", "$214/night", "4", "Picked · roomy"],
-                        ["Ryokan Yachiyo", "$250/night", "0", "Breakfast included"],
-                    ],
-                    footer: nil
-                )
-            ),
-            WorkspaceFile(
-                name: "Food guide", kind: .doc, summary: "12 spots near where you're staying",
-                sources: ["Google Maps"],
+                name: "Places to stay + food", kind: .doc, summary: "Hotels you picked and where to eat nearby",
+                sources: ["Google Hotels", "Google Maps"],
                 content: .doc([
-                    .title("Where to eat"),
-                    .heading("Near Shinjuku"),
+                    .title("Places to stay + food"),
+                    .heading("Staying"),
+                    .bullet("Hotel Gracery Shinjuku · 4.4 · $168 a night per room · Mar 26 – 30"),
+                    .bullet("Kyoto Machiya House · 4.8 · $214 a night · Mar 30 – Apr 2"),
+                    .heading("Eating near Shinjuku"),
                     .bullet("Ichiran Ramen · 4.3 · open 24 hours, solo booths (Maya's pick)"),
                     .bullet("Omoide Yokocho · yakitori alley, about $25 each"),
                     .bullet("Fuunji · 4.5 · tsukemen, expect a short line"),
-                    .heading("Near Gion, Kyoto"),
+                    .heading("Eating near Gion, Kyoto"),
                     .bullet("Nishiki Market · 4.3 · street food for lunch"),
                     .bullet("Gion Kappa · 4.4 · casual izakaya, reserve for 4"),
                 ])
-            ),
-            WorkspaceFile(
-                name: "Before you go", kind: .doc, summary: "Entry rules, money, phones, packing",
-                sources: ["Google Search"],
-                content: .doc([
-                    .title("Before you go"),
-                    .bullet("Passports valid for the whole stay. US citizens don't need a visa for short visits."),
-                    .bullet("Bring some yen: smaller shops and shrines are often cash only."),
-                    .bullet("Get an eSIM or pocket Wi-Fi before landing."),
-                    .bullet("Outlets are Type A like the US, so no adapter needed."),
-                    .bullet("Book teamLab Planets two weeks ahead."),
-                ])
-            ),
-            WorkspaceFile(
-                name: "Bookings", kind: .folder, summary: "Drop confirmations here",
-                sources: [], content: .folder("Empty. Forward confirmation emails and they'll be filed here.")
             ),
         ]
     )

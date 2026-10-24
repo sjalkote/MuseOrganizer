@@ -14,6 +14,7 @@
 		30D6D87778C997FEF6104960 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143E90EC06CE7F1624E951BB /* Components.swift */; };
 		396A8EF2FFF3E67539FABA4E /* Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A0D81D7081997147A0B62F /* Workspace.swift */; };
 		432D63FB6F0BCF058D3AF59E /* WorkspaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */; };
+		4A0A9D0ADB524B34830EE7D6 /* FolderButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D1F819D6680FF5E8D75945 /* FolderButton.swift */; };
 		5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E7484E60D9C03DD7B18D4E /* PlansView.swift */; };
 		64F57F92F1AEC85E6788895B /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379E4D9C420168A138CCD996 /* MockData.swift */; };
 		6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068BC743F0D15D2C30A3190F /* NewPlanSheet.swift */; };
@@ -28,7 +29,6 @@
 		A537FE9CC09393F3274D3EAF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
 		A5F1F6F3C4532EE746B78047 /* TripPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 958A8B86BAA23A6D2816901E /* TripPlanView.swift */; };
 		A70006B21984CE7BB2F24709 /* SharedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2313CBD60FF4002349EBB7 /* SharedView.swift */; };
-		A88A23676789154F7414224B /* PlanFolderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856D11ED201740E1135886CE /* PlanFolderPanel.swift */; };
 		AAB8A2775ADDF8236ADC33C4 /* BuildFolderSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */; };
 		B16C314AF84582BC56DA2EB6 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
 		C7D7D77046747A40051A0A50 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B867A1464B3924BC752DED9 /* ThreadView.swift */; };
@@ -93,7 +93,6 @@
 		744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlanView.swift; sourceTree = "<group>"; };
 		7C13289BA8D1B2235C06491E /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsView.swift; sourceTree = "<group>"; };
 		84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildFolderSheet.swift; sourceTree = "<group>"; };
-		856D11ED201740E1135886CE /* PlanFolderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanFolderPanel.swift; sourceTree = "<group>"; };
 		90E7484E60D9C03DD7B18D4E /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
 		958A8B86BAA23A6D2816901E /* TripPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlanView.swift; sourceTree = "<group>"; };
 		B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySheet.swift; sourceTree = "<group>"; };
@@ -103,6 +102,7 @@
 		CCA8FC6E9A17DBEA60BF416C /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
 		D0A0D81D7081997147A0B62F /* Workspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workspace.swift; sourceTree = "<group>"; };
 		D48B951487C4A8F4523AD17D /* HuddleShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HuddleShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2D1F819D6680FF5E8D75945 /* FolderButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderButton.swift; sourceTree = "<group>"; };
 		ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EF09F1835B3C85D8B9BC8C65 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		F9C8C4C90DE0394012083C0D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -241,8 +241,8 @@
 			isa = PBXGroup;
 			children = (
 				84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */,
+				E2D1F819D6680FF5E8D75945 /* FolderButton.swift */,
 				706C916B4B32C9C603D997D6 /* FolderView.swift */,
-				856D11ED201740E1135886CE /* PlanFolderPanel.swift */,
 			);
 			path = Workspace;
 			sourceTree = "<group>";
@@ -437,13 +437,13 @@
 				30D6D87778C997FEF6104960 /* Components.swift in Sources */,
 				18D46B03400959251258E5CB /* ConnectionsView.swift in Sources */,
 				7172FF5DAB27D887DFCAF40D /* ContentView.swift in Sources */,
+				4A0A9D0ADB524B34830EE7D6 /* FolderButton.swift in Sources */,
 				D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */,
 				9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */,
 				64F57F92F1AEC85E6788895B /* MockData.swift in Sources */,
 				E19435ACFF7266CC571962AC /* Models.swift in Sources */,
 				EF9892CE6140DECDF4C97F12 /* MuseOrganizerApp.swift in Sources */,
 				6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */,
-				A88A23676789154F7414224B /* PlanFolderPanel.swift in Sources */,
 				76A822D88C10CE0DE472B3CC /* PlanStore.swift in Sources */,
 				7D1AEA3AAEF158F510E4B21B /* PlanView.swift in Sources */,
 				5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */,

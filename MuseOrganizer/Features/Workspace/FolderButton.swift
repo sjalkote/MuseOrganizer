@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Entry point on a plan: build a Google Drive folder, or open and share the one that exists.
-struct PlanFolderPanel: View {
+/// One small button at the top of a plan: builds the Google Drive folder, then opens it.
+struct FolderButton: View {
     @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
 
@@ -9,16 +9,26 @@ struct PlanFolderPanel: View {
     @State private var showBuild = false
     @State private var showFolder = false
 
-    private var blueprint: WorkspaceBlueprint { Mock.blueprint(for: plan) }
-
     var body: some View {
-        Panel {
-            if let ws = plan.workspace {
-                built(ws)
-            } else {
-                notBuilt
-            }
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            if plan.workspace != nil { showFolder = true }
+            else if model.googleAccount == nil { showConnect = true }
+            else { showBuild = true }
+        } label: {
+            Label(plan.workspace?.folderName ?? "Drive folder",
+                  systemImage: plan.workspace == nil ? "folder.badge.plus" : "folder.fill")
+                .font(.smallStrong)
+                .foregroundStyle(Tint.stays.strong)
+                .lineLimit(1)
+                .padding(.horizontal, Space.s + 4)
+                .frame(minHeight: 32)
+                .background(Tint.stays.soft, in: .capsule)
+                .frame(minHeight: 44)
+                .contentShape(.rect)
         }
+        .buttonStyle(.pressable)
+        .accessibilityLabel(plan.workspace == nil ? "Build a Google Drive folder for this plan" : "Open the \(plan.workspace!.folderName) folder")
         .sheet(isPresented: $showConnect) {
             ConnectGoogleSheet {
                 model.googleAccount = "Devin T"
@@ -28,82 +38,13 @@ struct PlanFolderPanel: View {
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $showBuild) {
-            BuildFolderSheet(plan: plan, blueprint: blueprint) {
+            BuildFolderSheet(plan: plan, blueprint: Mock.blueprint(for: plan)) {
                 showBuild = false
                 Task { try? await Task.sleep(for: .milliseconds(400)); showFolder = true }
             }
         }
         .sheet(isPresented: $showFolder) {
             FolderView(plan: plan)
-        }
-    }
-
-    // MARK: Before
-
-    private var notBuilt: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            PanelHeader(title: "Plan folder", subtitle: "Everything in one Google Drive folder",
-                        symbol: "folder.fill", tint: .stays)
-
-            Text("SerpApi researches every detail, and Muse writes it up as Sheets and Docs your group can share.")
-                .font(.small)
-                .foregroundStyle(Palette.inkSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            FlowLayout(spacing: Space.s) {
-                ForEach(blueprint.files) { file in
-                    Label(file.name, systemImage: file.kind.symbol)
-                        .font(.smallStrong)
-                        .foregroundStyle(file.kind.tint.strong)
-                        .padding(.horizontal, Space.s + 2)
-                        .padding(.vertical, Space.xs + 2)
-                        .background(file.kind.tint.soft, in: .capsule)
-                }
-            }
-
-            Button {
-                if model.googleAccount == nil { showConnect = true } else { showBuild = true }
-            } label: {
-                Label("Build folder in Google Drive", systemImage: "folder.badge.plus")
-            }
-            .buttonStyle(.primary)
-
-            Text("\(blueprint.calls.count) searches · \(blueprint.files.count) files · about 20 seconds")
-                .font(.small)
-                .foregroundStyle(Palette.inkSecondary)
-                .frame(maxWidth: .infinity)
-        }
-    }
-
-    // MARK: After
-
-    private func built(_ ws: PlanWorkspace) -> some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            PanelHeader(title: ws.folderName,
-                        subtitle: "Google Drive · \(ws.files.count) files · \(ws.builtAt.formatted(.relative(presentation: .named)))",
-                        symbol: "folder.fill", tint: .stays)
-
-            VStack(spacing: 0) {
-                ForEach(Array(ws.files.prefix(3).enumerated()), id: \.element.id) { i, file in
-                    HStack(spacing: Space.m) {
-                        TintTile(symbol: file.kind.symbol, tint: file.kind.tint, size: 32)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(file.name).font(.bodyRegular).foregroundStyle(Palette.ink)
-                            Text(file.kind.label).font(.small).foregroundStyle(Palette.inkSecondary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, Space.s)
-                    if i < 2 { Hairline(inset: 48) }
-                }
-            }
-
-            Button { showFolder = true } label: {
-                Label("Open folder", systemImage: "folder")
-            }
-            .buttonStyle(.primary)
-
-            ShareFolderButton(plan: plan)
         }
     }
 }

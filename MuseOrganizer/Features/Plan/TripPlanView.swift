@@ -9,11 +9,13 @@ struct TripPlanView: View {
                 Panel { PlanHeader(plan: plan) }
 
                 Panel {
-                    PanelHeader(title: "Decisions", subtitle: "\(plan.decidedCount) of \(plan.decisions.count) settled",
-                                symbol: "checklist", tint: .planner)
-                    DecisionList(decisions: plan.decisions) { d in
-                        d.title == "Dates" ? "Sam is away Mar 20–24. These dates avoid it." : nil
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Decisions").font(.bodyStrong).foregroundStyle(Palette.ink)
+                        Spacer()
+                        Text("\(plan.decidedCount) of \(plan.decisions.count) settled").font(.small).foregroundStyle(Palette.inkSecondary)
                     }
+                    .padding(.bottom, Space.s)
+                    DecisionList(decisions: plan.decisions, note: "Sam is away Mar 20–24. These dates avoid it.")
                 }
 
                 ForEach(OptionCategory.allCases) { category in
@@ -28,8 +30,6 @@ struct TripPlanView: View {
                 Panel {
                     Itinerary(days: plan.itinerary)
                 }
-
-                PlanFolderPanel(plan: plan)
 
                 Panel {
                     VStack(spacing: Space.s) {
@@ -50,7 +50,7 @@ struct TripPlanView: View {
 }
 
 // MARK: - Options band
-// Each category is its own colored band so Flights, Stays, and Things to do never blur together.
+// Each category is its own colored band. Cards are compact so you can see a whole row without scrolling far.
 
 private struct OptionBand: View {
     var category: OptionCategory
@@ -59,18 +59,17 @@ private struct OptionBand: View {
     var onVote: (BoardOption.ID, BoardOption.Vote) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            HStack(spacing: Space.m) {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.s) {
                 Image(systemName: category.symbol)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.onAccent)
-                    .frame(width: 40, height: 40)
-                    .background(category.tint.strong, in: .rect(cornerRadius: 12, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(category.rawValue).font(.heading).foregroundStyle(Palette.ink)
-                    Text("\(items.count) options · via \(items[0].source) · \(items[0].fetched)")
-                        .font(.small).foregroundStyle(Palette.inkSecondary)
-                }
+                    .frame(width: 28, height: 28)
+                    .background(category.tint.strong, in: .rect(cornerRadius: 8, style: .continuous))
+                Text(category.rawValue).font(.bodyStrong).foregroundStyle(Palette.ink)
+                Text("\(items.count)").font(.small).foregroundStyle(Palette.inkSecondary)
+                Spacer()
+                Text("via \(items[0].source)").font(.caption).foregroundStyle(Palette.inkSecondary)
             }
             .padding(.horizontal, Space.m)
             .accessibilityElement(children: .combine)
@@ -102,121 +101,145 @@ struct OptionCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            VStack(alignment: .leading, spacing: Space.xs) {
-                HStack(spacing: Space.s) {
-                    if option.isTopPick {
-                        Label("Top pick", systemImage: "star.fill")
-                            .font(.smallStrong)
-                            .foregroundStyle(Palette.onAccent)
-                            .padding(.horizontal, Space.s)
-                            .padding(.vertical, 2)
-                            .background(Palette.accent, in: .capsule)
-                    }
-                    if let from = option.sharedFrom, let by = option.sharedBy {
-                        Label("\(by) via \(from.rawValue)", systemImage: from.symbol)
-                            .font(.smallStrong)
-                            .foregroundStyle(from.tint.strong)
-                    }
-                    if !option.isTopPick && option.sharedFrom == nil {
-                        Text(option.category.rawValue).font(.smallStrong).foregroundStyle(option.category.tint.strong)
-                    }
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.xs) {
+                if option.isTopPick {
+                    Image(systemName: "star.fill").font(.caption2).foregroundStyle(Palette.accent)
+                        .accessibilityLabel("Top pick")
                 }
-                Text(option.title).font(.bodyStrong).foregroundStyle(Palette.ink).lineLimit(1)
-                Text(option.detail).font(.small).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                if let from = option.sharedFrom {
+                    Image(systemName: from.symbol).font(.caption2).foregroundStyle(from.tint.strong)
+                        .accessibilityLabel("Shared from \(from.rawValue)")
+                }
+                Text(option.title).font(.smallStrong).foregroundStyle(Palette.ink).lineLimit(1)
             }
+            Text(option.detail).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
 
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                Text(option.price).font(.hero).figure().foregroundStyle(Palette.ink)
-                Text(option.unit).font(.small).foregroundStyle(Palette.inkSecondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(option.price).font(.heading).figure().foregroundStyle(Palette.ink)
+                Text(option.unit).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
             }
 
             Text(option.tradeoff)
-                .font(.small)
-                .foregroundStyle(Palette.ink)
+                .font(.caption)
+                .foregroundStyle(Palette.inkSecondary)
                 .lineLimit(2, reservesSpace: true)
 
-            Hairline()
-
-            HStack {
+            HStack(spacing: Space.xs) {
                 VoteControl(up: option.upVotes, down: option.downVotes, mine: option.myVote) { onVote(option.id, $0) }
-                Spacer(minLength: Space.s)
-                if option.myVote == .none {
-                    if option.upVotes + option.downVotes > 0 {
-                        Label("Vote to see who", systemImage: "eye.slash")
-                            .font(.small)
-                            .foregroundStyle(Palette.inkSecondary)
-                            .labelStyle(.iconOnly)
-                            .accessibilityLabel("Vote to see who voted")
-                    }
-                } else if !voters.isEmpty {
-                    AvatarStack(members: voters, size: 24)
+                Spacer(minLength: 0)
+                if option.myVote != .none, !voters.isEmpty {
+                    AvatarStack(members: voters, size: 20)
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
         }
-        .padding(Space.m)
-        .frame(width: 296, alignment: .leading)
-        .background(Palette.panel, in: .rect(cornerRadius: Radius.m + 4, style: .continuous))
+        .padding(Space.s + 4)
+        .frame(width: 216, alignment: .leading)
+        .background(Palette.panel, in: .rect(cornerRadius: Radius.m, style: .continuous))
         .overlay {
             if option.isTopPick {
-                RoundedRectangle(cornerRadius: Radius.m + 4, style: .continuous)
-                    .strokeBorder(Palette.accent, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
+                    .strokeBorder(Palette.accent, lineWidth: 1.5)
             }
         }
+        .accessibilityElement(children: .contain)
     }
 }
 
-// MARK: - Itinerary
+// MARK: - Itinerary (collapsed by default, each day expands on tap)
 
 private struct Itinerary: View {
     var days: [ItineraryDay]
+    @State private var expanded = false
+    @State private var openDays: Set<ItineraryDay.ID> = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.l) {
-            PanelHeader(title: "Itinerary", subtitle: "Draft · updates as you vote", symbol: "map.fill", tint: .dates)
-            ForEach(days) { day in
-                VStack(alignment: .leading, spacing: Space.m) {
-                    HStack(spacing: Space.s) {
-                        Text("Day \(day.day)")
-                            .font(.smallStrong)
-                            .foregroundStyle(Palette.onAccent)
-                            .padding(.horizontal, Space.s + 2)
-                            .padding(.vertical, Space.xs)
-                            .background(day.city == "Kyoto" ? Tint.stays.strong : Tint.flights.strong, in: .capsule)
-                        Text("\(day.date) · \(day.city)").font(.smallStrong).foregroundStyle(Palette.ink)
-                    }
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(day.slots.enumerated()), id: \.element.id) { i, slot in
-                            HStack(alignment: .top, spacing: Space.m) {
-                                Text(slot.time)
-                                    .font(.small).figure()
-                                    .foregroundStyle(Palette.inkSecondary)
-                                    .frame(width: 72, alignment: .leading)
-                                VStack(spacing: 0) {
-                                    Circle()
-                                        .strokeBorder(Palette.panel, lineWidth: 2)
-                                        .background(Circle().fill(day.city == "Kyoto" ? Tint.stays.strong : Tint.flights.strong))
-                                        .frame(width: 12, height: 12)
-                                        .padding(.top, 4)
-                                    if i < day.slots.count - 1 {
-                                        Rectangle().fill(Palette.separator).frame(width: 2).frame(maxHeight: .infinity)
-                                    }
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(slot.title).font(.bodyRegular).foregroundStyle(Palette.ink)
-                                    Text(slot.detail).font(.small).foregroundStyle(Palette.inkSecondary)
-                                }
-                                .padding(.bottom, Space.l)
-                            }
-                            .accessibilityElement(children: .combine)
-                        }
-                    }
-                    .padding(Space.m)
-                    .background(Palette.fill.opacity(0.6), in: .rect(cornerRadius: Radius.m, style: .continuous))
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(Motion.smooth) {
+                    expanded.toggle()
+                    if expanded, openDays.isEmpty, let first = days.first { openDays = [first.id] }
                 }
+            } label: {
+                HStack(spacing: Space.m) {
+                    TintTile(symbol: "map.fill", tint: .dates, size: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Itinerary").font(.bodyStrong).foregroundStyle(Palette.ink)
+                        Text("9 days · \(days.count) drafted so far · Tokyo, then Kyoto").font(.small).foregroundStyle(Palette.inkSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.smallStrong)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                }
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+
+            if expanded {
+                VStack(spacing: Space.s) {
+                    ForEach(days) { day in dayRow(day) }
+                }
+                .padding(.top, Space.m)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+    }
+
+    private func dayRow(_ day: ItineraryDay) -> some View {
+        let open = openDays.contains(day.id)
+        let color = day.city == "Kyoto" ? Tint.stays.strong : Tint.flights.strong
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(Motion.snappy) {
+                    if open { openDays.remove(day.id) } else { openDays.insert(day.id) }
+                }
+            } label: {
+                HStack(spacing: Space.s) {
+                    Text("Day \(day.day)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.onAccent)
+                        .padding(.horizontal, Space.s)
+                        .padding(.vertical, 3)
+                        .background(color, in: .capsule)
+                    Text("\(day.date) · \(day.city)").font(.smallStrong).foregroundStyle(Palette.ink)
+                    Spacer()
+                    Text("\(day.slots.count) stops").font(.caption).foregroundStyle(Palette.inkSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.inkFaint)
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                }
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(open ? "Expanded" : "Collapsed")
+
+            if open {
+                VStack(alignment: .leading, spacing: Space.s) {
+                    ForEach(day.slots) { slot in
+                        HStack(alignment: .firstTextBaseline, spacing: Space.m) {
+                            Text(slot.time).font(.caption).figure().foregroundStyle(Palette.inkSecondary)
+                                .frame(width: 64, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(slot.title).font(.small).foregroundStyle(Palette.ink)
+                                Text(slot.detail).font(.caption).foregroundStyle(Palette.inkSecondary)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(.bottom, Space.s)
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, Space.m)
+        .background(Palette.fill.opacity(0.6), in: .rect(cornerRadius: Radius.m, style: .continuous))
     }
 }
 

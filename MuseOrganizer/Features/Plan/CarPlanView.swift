@@ -15,7 +15,6 @@ struct CarPlanView: View {
                 Panel { snapshot }
                 Panel { options }
                 recommendation
-                PlanFolderPanel(plan: plan)
                 threadPreview
             }
             .padding(.horizontal, Space.m)
