@@ -17,10 +17,21 @@ struct Joined: Codable {
     let members: [String: String]
 }
 
+struct GroupState: Codable {
+    let members: [String: String]
+    let group: [Message]
+    let tally: [String: Int]
+    let voted: [String]
+    let shared: [String]
+    let myVote: String?
+    let winner: String?
+}
+
 struct Message: Codable {
     let author: String
     let text: String
     var cards: [Card]? = nil
+    var replies: [String]? = nil
 }
 
 struct Card: Codable {
@@ -98,8 +109,9 @@ enum API {
         return d
     }()
 
-    private static func send<T: Decodable>(_ path: String, body: [String: Any]? = nil) async throws -> T {
-        var req = URLRequest(url: base.appending(path: path))
+    private static func send<T: Decodable>(_ path: String, query: [URLQueryItem] = [],
+                                           body: [String: Any]? = nil) async throws -> T {
+        var req = URLRequest(url: base.appending(path: path).appending(queryItems: query))
         if let body {
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -122,8 +134,25 @@ enum API {
     static func info(_ sid: String) async throws -> SessionInfo {
         try await send("sessions/\(sid)")
     }
-    static func group(_ sid: String) async throws -> [Message] {
-        try await send("sessions/\(sid)/group")
+    static func state(_ sid: String, _ mid: String) async throws -> GroupState {
+        try await send("sessions/\(sid)/state", query: [URLQueryItem(name: "member", value: mid)])
+    }
+    static func vote(_ sid: String, _ mid: String, option: String) async throws -> GroupState {
+        try await send("sessions/\(sid)/vote/\(mid)", body: ["option": option])
+    }
+
+    /// Calls `onChange` whenever the session changes (Server-Sent Events), reconnecting if the stream drops.
+    /// The stream only carries a version number; callers refetch what they're allowed to see.
+    static func listen(_ sid: String, onChange: () async -> Void) async {
+        while !Task.isCancelled {
+            do {
+                let (bytes, _) = try await URLSession.shared.bytes(from: base.appending(path: "sessions/\(sid)/events"))
+                for try await line in bytes.lines where line.hasPrefix("data:") {
+                    await onChange()
+                }
+            } catch {}
+            try? await Task.sleep(for: .seconds(2))
+        }
     }
     static func say(_ sid: String, _ mid: String, _ text: String) async throws -> [Message] {
         try await send("sessions/\(sid)/group/\(mid)", body: ["text": text])

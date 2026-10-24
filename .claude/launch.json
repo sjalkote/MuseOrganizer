@@ -4,7 +4,7 @@
     {
       "name": "huddle-backend",
       "runtimeExecutable": "uv",
-      "runtimeArgs": ["run", "--directory", "backend", "uvicorn", "huddle.api:app", "--port", "8000", "--reload"],
+      "runtimeArgs": ["run", "--directory", "backend", "uvicorn", "huddle.api:app", "--port", "8000", "--reload", "--timeout-graceful-shutdown", "1"],
       "port": 8000,
       "url": "http://127.0.0.1:8000"
     }

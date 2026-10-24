@@ -22,10 +22,16 @@ struct HomeView: View {
             List {
                 ForEach(groups) { g in
                     NavigationLink(value: g) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(g.title).font(.headline)
-                            Text("You're \(g.myName) · invite code \(g.sessionId)")
-                                .font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            Image(systemName: "car.side.fill")
+                                .font(.title3).foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color.red.gradient, in: .rect(cornerRadius: 10))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(g.title).font(.headline)
+                                Text("You're \(g.myName) · code \(g.sessionId)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -37,8 +43,14 @@ struct HomeView: View {
             }
             .overlay {
                 if groups.isEmpty {
-                    ContentUnavailableView("No groups yet", systemImage: "person.3",
-                                           description: Text("Start a decision or join one with an invite code."))
+                    ContentUnavailableView {
+                        Label("Decide together", systemImage: "person.3.fill")
+                    } description: {
+                        Text("Everyone tells Muse their real budget in private. Muse finds options that work for the whole group, and nobody has to say their number out loud.")
+                    } actions: {
+                        Button("Start a decision") { sheet = .create }.buttonStyle(.borderedProminent)
+                        Button("Join with a code") { sheet = .join }
+                    }
                 }
             }
             .navigationTitle("Huddle")

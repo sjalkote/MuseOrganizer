@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from huddle import api, engine
@@ -88,3 +90,69 @@ def test_rerun_without_changes_does_not_repost():
     engine.run(s)
     engine.run(s)
     assert len(s.group) == 1 and len(s.threads["mom"]) == 1
+
+
+def test_voting_announces_winner_with_next_step_and_ties_go_to_rank():
+    s = family(mom_budget=800)
+    top = engine.run(s)
+    assert engine.vote(s, "mom", top[1]["name"]) is None
+    engine.vote(s, "dad", top[0]["name"])
+    engine.vote(s, "dad", top[1]["name"])            # members can change their vote
+    win = engine.vote(s, "teen", top[0]["name"])
+    assert win["name"] == top[1]["name"] and s.winner == win["name"]
+    assert "2 of 3 votes" in s.group[-1]["text"] and "test drive" in s.group[-1]["text"]
+    try:
+        engine.vote(s, "mom", top[0]["name"])
+        assert False
+    except ValueError:
+        pass
+
+    t = family(mom_budget=800)
+    top = engine.run(t)
+    for mid, i in [("mom", 2), ("dad", 1), ("teen", 0)]:
+        engine.vote(t, mid, top[i]["name"])
+    assert t.winner == top[0]["name"]                # three-way tie -> best ranked
+
+
+def test_api_vote_state_and_persistence():
+    c = TestClient(api.app)
+    sid = c.post("/sessions", json={"template": "car", "members": [
+        {"id": "a", "name": "A"}, {"id": "b", "name": "B"}]}).json()["id"]
+    c.post(f"/sessions/{sid}/private/a", json={"text": "I can do $812 a month"})
+    names = [card["option"]["name"] for card in c.post(f"/sessions/{sid}/run").json()[-1]["cards"]]
+    st = c.post(f"/sessions/{sid}/vote/a", json={"option": names[0]}).json()
+    assert st["tally"][names[0]] == 1 and st["my_vote"] == names[0] and st["voted"] == ["A"]
+    assert c.get(f"/sessions/{sid}/state", params={"member": "b"}).json()["my_vote"] is None
+    assert c.post(f"/sessions/{sid}/vote/b", json={"option": "Batmobile"}).status_code == 404
+    c.post(f"/sessions/{sid}/vote/b", json={"option": names[0]})
+
+    api.SESSIONS.clear()                              # simulate a restart: reload from SQLite
+    st = c.get(f"/sessions/{sid}/state").json()
+    assert st["winner"] == names[0] and "812" not in json.dumps(st)
+
+
+def test_yes_to_private_compromise_relaxes_only_my_limit_and_reruns():
+    s = family()
+    engine.run(s)
+    assert s.threads["mom"][-1]["replies"] == ["Yes, I'm open to it", "Keep looking"]
+    engine.private_message(s, "mom", "Yes, I'm open to it")
+    assert s.private["mom"]["max_monthly"] == 733
+    assert s.top[0]["fits_all"] and "for everyone" in s.group[-1]["text"]
+    assert "Mom" not in s.group[-1]["text"]
+
+
+def test_keep_looking_keeps_limit():
+    s = family()
+    engine.run(s)
+    engine.private_message(s, "mom", "Keep looking")
+    assert s.private["mom"]["max_monthly"] == 650 and len(s.group) == 1
+
+
+def test_bool_question_takes_yes_no():
+    s = family()
+    s.add_member("kid", "Kid")
+    engine.private_message(s, "kid", "I can do $500 a month and need 5 seats")
+    assert s.threads["kid"][-1]["replies"] == ["Yes", "No"]
+    engine.private_message(s, "kid", "No")
+    assert s.private["kid"]["needs_awd"] is False
+    assert "everything I need" in s.threads["kid"][-1]["text"]

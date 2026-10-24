@@ -4,6 +4,7 @@ import SwiftUI
 struct CarCardView: View {
     let option: CarOption
     let rank: Int
+    var voting: Voting? = nil
     let onExplain: ((CarOption) -> Void)?
 
     @State private var plan = "finance"
@@ -18,13 +19,13 @@ struct CarCardView: View {
                 Text("#\(rank)").font(.headline).foregroundStyle(.secondary)
                 Text("Toyota \(option.name)").font(.title3.bold())
                 Spacer()
-                Text("\(option.score)").font(.headline.monospacedDigit())
-                    .padding(.horizontal, 8).padding(.vertical, 2)
+                Text("\(option.score)% match").font(.caption.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(.purple.opacity(0.15), in: .capsule)
-                    .accessibilityLabel("Match score \(option.score)")
+                    .foregroundStyle(.purple)
             }
             if !option.fitsAll {
-                Label("Compromise: misses one group limit", systemImage: "exclamationmark.triangle.fill")
+                Label("Closest option: misses a group limit", systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
             }
             HStack(spacing: 16) {
@@ -54,6 +55,10 @@ struct CarCardView: View {
                     .font(.caption).foregroundStyle(.green)
             }
 
+            if let voting {
+                voteRow(voting)
+            }
+
             HStack {
                 if let link = option.listings?.first?.link, let url = URL(string: link) {
                     Link(destination: url) { Label("Listings", systemImage: "link") }
@@ -68,6 +73,33 @@ struct CarCardView: View {
         }
         .padding()
         .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 20))
+        .overlay {
+            if voting?.state.winner == option.name {
+                RoundedRectangle(cornerRadius: 20).strokeBorder(.orange, lineWidth: 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func voteRow(_ v: Voting) -> some View {
+        let mine = v.state.myVote == option.name
+        if v.state.winner == option.name {
+            Label("Group's pick", systemImage: "trophy.fill")
+                .font(.headline).foregroundStyle(.orange)
+        } else if v.state.winner == nil, let count = v.state.tally[option.name] {
+            HStack {
+                Button(mine ? "Your vote" : "Vote", systemImage: mine ? "checkmark.circle.fill" : "hand.thumbsup") {
+                    v.onVote(option.name)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(mine ? .green : .accentColor)
+                .disabled(mine)
+                Spacer()
+                Text(count == 1 ? "1 vote" : "\(count) votes")
+                    .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+            }
+        }
     }
 
     private func stat(_ value: String, _ unit: String, _ icon: String) -> some View {
@@ -86,7 +118,8 @@ struct CarCardView: View {
         }
     }
 
-    private func dollars(_ n: Int) -> String {
-        n.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-    }
+}
+
+func dollars(_ n: Int) -> String {
+    n.formatted(.currency(code: "USD").precision(.fractionLength(0)))
 }

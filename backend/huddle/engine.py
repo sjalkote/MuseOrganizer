@@ -5,6 +5,7 @@ Group text is built from option data and anonymized conflict info, Spark only ev
 and every Muse group message passes `_leaks` before it is stored.
 """
 import re
+from collections import defaultdict
 import uuid
 from dataclasses import dataclass, field
 
@@ -26,6 +27,10 @@ class Session:
     group: list = field(default_factory=list)       # [message]
     found: dict = field(default_factory=dict)       # session-level search results (dealers, ...)
     top: list = field(default_factory=list)         # options last posted to the group
+    votes: dict = field(default_factory=dict)       # member_id -> option name
+    winner: str | None = None
+    version: int = 0                                # bumped on every change; drives the live stream
+    pending: dict = field(default_factory=dict)     # member_id -> yes/no question Muse is waiting on
 
     @property
     def schema(self):
@@ -57,8 +62,11 @@ class Session:
                 v = max(0, min(5, int(v)))
             self.private[mid][key] = v
 
-    def say_private(self, mid, author, text):
-        self.threads[mid].append({"author": author, "text": text})
+    def say_private(self, mid, author, text, replies=None):
+        msg = {"author": author, "text": text}
+        if replies:
+            msg["replies"] = replies  # suggested quick answers the app shows as buttons
+        self.threads[mid].append(msg)
 
     def post_group(self, text, cards=(), author="muse"):
         if author == "muse" and _leaks(text, self):
@@ -101,23 +109,53 @@ def _fmt(f, v):
     if f["type"] == "money":
         return f"{f['label']} ${v:,.0f}"
     if f["type"] == "weight":
-        return f"{f['label']}: {v}"
+        return f"{f['topic']} {'matters a lot' if v >= 4 else 'matters a little' if v >= 2 else 'not a priority'}"
     if f["type"] == "bool":
         return f["label"] if v else f"doesn't need {f['label'].removeprefix('needs ')}"
-    return f"{f['label']}: {v}"
+    return f"{f['label']} {v}"
+
+
+YES = re.compile(r"^(yes|yeah|yep|sure|ok|okay|that works|i'm open)\b", re.I)
+NO = re.compile(r"^(no|nope|nah|keep looking)\b", re.I)
+
+
+def _yes_no(text):
+    t = text.strip()
+    return True if YES.match(t) else False if NO.match(t) else None
 
 
 def private_message(s, mid, text):
     """Member tells Muse something privately; Muse records constraints and asks the next question."""
     s.say_private(mid, mid, text)
-    found = muse.extract(s.schema, text)
-    s.set_constraints(mid, found)
+    pending, answer = s.pending.pop(mid, None), _yes_no(text)
+    if pending and answer is not None:
+        value = pending["yes"] if answer else pending["no"]
+        if value is not None:
+            s.set_constraints(mid, {pending["key"]: value})
+        if pending.get("rerun"):
+            reply = ("Thanks. I'll update the group's options, and nobody will know it was you." if answer
+                     else "No problem, your limit stays as it is. I'll keep looking.")
+            s.say_private(mid, "muse", reply)
+            if answer:
+                run(s)
+            return reply
+        found = {pending["key"]: value}
+    else:
+        found = muse.extract(s.schema, text)
+        s.set_constraints(mid, found)
     mine = s.private[mid]
     got = [_fmt(f, mine[f["key"]]) for f in s.schema if f["key"] in found]
     missing = [f for f in s.schema if f["kind"] == "hard" and f["key"] not in mine]
     reply = ("Got it: " + "; ".join(got) + ". " if got else "")
-    reply += missing[0]["ask"] if missing else "That's everything I need. This stays between us."
-    s.say_private(mid, "muse", reply)
+    replies = None
+    if missing:
+        reply += missing[0]["ask"]
+        if missing[0]["type"] == "bool":
+            s.pending[mid] = {"key": missing[0]["key"], "yes": True, "no": False}
+            replies = ["Yes", "No"]
+    else:
+        reply += "That's everything I need. This stays between us."
+    s.say_private(mid, "muse", reply, replies)
     return reply
 
 
@@ -158,7 +196,10 @@ def rank(options, s):
         vals = [o[f["attr"]] for o in options]
         lo, hi = min(vals), max(vals)
         for i, v in enumerate(vals):
-            n = 1.0 if hi == lo else (v - lo) / (hi - lo)
+            if hi == lo:  # every option ties on this attribute, so each fully satisfies it
+                scores[i] += w
+                continue
+            n = (v - lo) / (hi - lo)
             scores[i] += w * (1 - n if f["better"] == "lower" else n)
         total += w
     for o, sc in zip(options, scores):
@@ -192,7 +233,9 @@ def run(s, top_n=3):
 
     if fits:
         top = rank(fits, s)[:top_n]
-        draft = f"I found {len(fits)} {t['noun']}s that work for everyone. Top pick: {top[0]['name']}."
+        n = len(fits)
+        draft = (f"I found {n} {t['noun']}{'s' if n != 1 else ''} that {'work' if n != 1 else 'works'} for everyone. "
+                 f"Top pick: {top[0]['name']}.")
     else:
         top = _compromise(s, options, limits)[:top_n]
         draft = _compromise_text(s, top[0], limits)
@@ -204,10 +247,38 @@ def run(s, top_n=3):
     text = safe_explain({"options": facts, "assumptions": t.get("assumptions", {})}, draft)
     def key(opts):
         return [(o["name"], o["fits_all"]) for o in opts]
-    if key(s.top) != key(top):  # re-running with nothing changed doesn't repost
+    if key(s.top) != key(top):  # re-running with nothing changed doesn't repost or reset votes
         s.post_group(text, cards=[{"type": t["card"], "option": o} for o in top])
+        s.votes, s.winner = {}, None
     s.top = top
     return top
+
+
+def tally(s):
+    return {o["name"]: sum(v == o["name"] for v in s.votes.values()) for o in s.top}
+
+
+def vote(s, mid, name):
+    """Record a vote; once every member has voted, announce the winner with the template's next step."""
+    if mid not in s.members:
+        raise KeyError(mid)
+    if name not in tally(s):
+        raise KeyError(name)
+    if s.winner:
+        raise ValueError("voting is closed")
+    s.votes[mid] = name
+    if len(s.votes) < len(s.members):
+        return None
+    counts = tally(s)
+    # Most votes wins; ties go to the higher-ranked option (s.top is in rank order).
+    win = max(s.top, key=lambda o: (counts[o["name"]], -s.top.index(o)))
+    s.winner = win["name"]
+    # Search results are offered to the template as their first hit's title, e.g. {dealers}.
+    found = {k: f"{v[0]['title']} ({v[0].get('address', '')})" for k, v in s.found.items() if v}
+    step = s.template.get("next_step", "").format_map(defaultdict(lambda: "a nearby location", {**win, **found}))
+    s.post_group(f"Everyone voted: the {win['name']} wins with {counts[win['name']]} of {len(s.votes)} votes. {step}",
+                 cards=[{"type": s.template["card"], "option": win}])
+    return win
 
 
 def explain_option(s, mid, name):
@@ -252,4 +323,7 @@ def _ask_privately(s, best, misses):
                        f"({_fmt(f, mine[f['key']])}{actual}). "
                        "Would you be open to it, or should I keep looking?")
                 if all(m["text"] != ask for m in s.threads[mid]):
-                    s.say_private(mid, "muse", ask)
+                    # "Yes" relaxes their own limit to exactly what this option needs, then re-runs.
+                    s.pending[mid] = {"key": f["key"], "yes": False if f["op"] == "requires" else v,
+                                      "no": None, "rerun": True}
+                    s.say_private(mid, "muse", ask, ["Yes, I'm open to it", "Keep looking"])
