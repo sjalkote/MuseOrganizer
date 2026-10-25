@@ -9,10 +9,10 @@ struct BuildFolderSheet: View {
 
     @State private var session: BuildSession
 
-    init(plan: Plan, blueprint: WorkspaceBlueprint, onOpenFolder: @escaping () -> Void) {
+    init(plan: Plan, onOpenFolder: @escaping () -> Void) {
         self.plan = plan
         self.onOpenFolder = onOpenFolder
-        _session = State(initialValue: BuildSession(blueprint: blueprint))
+        _session = State(initialValue: BuildSession(plan: plan))
     }
 
     var body: some View {
@@ -85,6 +85,11 @@ struct BuildFolderSheet: View {
         Panel {
             PanelHeader(title: "Research", subtitle: "Live data from SerpApi", symbol: "magnifyingglass", tint: .flights)
                 .padding(.bottom, Space.s)
+            if session.blueprint.calls.isEmpty {
+                Text(session.error == nil ? "Choosing the searches…" : " ")
+                    .font(.small).foregroundStyle(Palette.inkSecondary)
+                    .padding(.vertical, Space.s)
+            }
             ForEach(Array(session.blueprint.calls.enumerated()), id: \.element.id) { i, call in
                 let status = session.callStatus[call.id] ?? .queued
                 HStack(alignment: .top, spacing: Space.m) {
@@ -111,8 +116,13 @@ struct BuildFolderSheet: View {
 
     private var writing: some View {
         Panel {
-            PanelHeader(title: "Writing", subtitle: "Muse turns the research into files", symbol: "square.and.pencil", tint: .planner)
+            PanelHeader(title: "Writing", subtitle: "Turning the research into files", symbol: "square.and.pencil", tint: .planner)
                 .padding(.bottom, Space.s)
+            if session.blueprint.files.isEmpty {
+                Text(session.error == nil ? "Choosing the files…" : " ")
+                    .font(.small).foregroundStyle(Palette.inkSecondary)
+                    .padding(.vertical, Space.s)
+            }
             ForEach(Array(session.blueprint.files.enumerated()), id: \.element.id) { i, file in
                 let status = session.fileStatus[file.id] ?? .queued
                 HStack(spacing: Space.m) {
@@ -139,9 +149,9 @@ struct BuildFolderSheet: View {
     private var done: some View {
         Panel(fill: Tint.activities.soft) {
             VStack(alignment: .leading, spacing: Space.m) {
-                Text("\(session.blueprint.files.count) files in Google Drive")
+                Text("\(session.blueprint.files.count) files in this plan")
                     .font(.bodyStrong).foregroundStyle(Palette.ink)
-                Text("Built from \(session.blueprint.calls.count) searches. Share the link and everyone can open it, no app needed.")
+                Text("Built from \(session.blueprint.calls.count) searches.")
                     .font(.small).foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 Button { onOpenFolder() } label: { Label("Open folder", systemImage: "folder") }

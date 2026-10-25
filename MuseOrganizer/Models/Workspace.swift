@@ -45,21 +45,38 @@ enum FileContent: Hashable {
 }
 
 struct WorkspaceFile: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     var name: String
     var kind: WorkspaceFileKind
     var summary: String          // "6 rows · totals per person"
     var sources: [String]        // "Google Flights", "Google Hotels"
     var content: FileContent
+
+    init(id: UUID = UUID(), name: String, kind: WorkspaceFileKind, summary: String, sources: [String], content: FileContent) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.summary = summary
+        self.sources = sources
+        self.content = content
+    }
 }
 
 /// One SerpApi request the build makes.
 struct ResearchCall: Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     var engine: String           // "google_flights"
     var query: String
     var result: String           // "14 itineraries"
     var duration: Double
+
+    init(id: UUID = UUID(), engine: String, query: String, result: String, duration: Double) {
+        self.id = id
+        self.engine = engine
+        self.query = query
+        self.result = result
+        self.duration = duration
+    }
 }
 
 /// The finished folder.
@@ -85,12 +102,32 @@ struct WorkspaceBlueprint {
 
 extension Mock {
     static func blueprint(for plan: Plan) -> WorkspaceBlueprint {
-        var blueprint = plan.kind == .decision ? carBlueprint : tripBlueprint
-        blueprint.planID = plan.id
-        blueprint.members = plan.members.map(\.name)
-        blueprint.context["planName"] = plan.name
-        blueprint.context["kind"] = plan.kind == .decision ? "decision" : "trip"
-        return blueprint
+        switch plan.kind {
+        case .trip:
+            var blueprint = tripBlueprint
+            blueprint.planID = plan.id
+            blueprint.members = plan.members.map(\.name)
+            blueprint.context["planName"] = plan.name
+            blueprint.context["kind"] = "trip"
+            return blueprint
+        case .decision:
+            var blueprint = carBlueprint
+            blueprint.planID = plan.id
+            blueprint.members = plan.members.map(\.name)
+            blueprint.context["planName"] = plan.name
+            blueprint.context["kind"] = "decision"
+            return blueprint
+        case .gathering, .general:
+            return WorkspaceBlueprint(
+                folderName: plan.name,
+                calls: [ResearchCall(engine: "google", query: plan.name, result: "search", duration: 0.8)],
+                files: [WorkspaceFile(name: "Overview", kind: .doc, summary: "Plan overview", sources: ["Google Search"],
+                                      content: .doc([.title(plan.name), .paragraph(plan.nextStep)]))],
+                context: ["planName": plan.name, "kind": "plan"],
+                planID: plan.id,
+                members: plan.members.map(\.name)
+            )
+        }
     }
 
     // MARK: Trip

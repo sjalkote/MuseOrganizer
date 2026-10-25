@@ -31,6 +31,7 @@ extension Plan {
         case .trip: .japanDusk
         case .decision: .sageRoad
         case .gathering: .candlelight
+        case .general: .candlelight
         }
     }
 }

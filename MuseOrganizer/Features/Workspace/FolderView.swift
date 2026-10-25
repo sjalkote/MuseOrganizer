@@ -4,7 +4,7 @@ import SwiftUI
 struct FolderView: View {
     @Environment(\.dismiss) private var dismiss
     var plan: Plan
-    @State private var showDemoNote = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -20,10 +20,12 @@ struct FolderView: View {
                         }
                         sourcesPanel(ws)
                         VStack(spacing: Space.s) {
-                            Button { showDemoNote = true } label: {
-                                Label("Open in Google Drive", systemImage: "arrow.up.right.square")
+                            if let url = plan.workspace?.url, Self.isRealDriveLink(url) {
+                                Button { openURL(url) } label: {
+                                    Label("Open in Google Drive", systemImage: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.primary)
                             }
-                            .buttonStyle(.primary)
                             ShareFolderButton(plan: plan)
                         }
                     }
@@ -38,12 +40,12 @@ struct FolderView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
-            .alert("Demo folder", isPresented: $showDemoNote) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("In the demo the folder lives in NxT. Once Google Drive is connected for real, this opens it in Drive.")
-            }
         }
+    }
+
+    /// Real folder ids come from Drive. Mock builds use a huddle- prefix.
+    private static func isRealDriveLink(_ url: URL) -> Bool {
+        url.host?.contains("google.com") == true && !url.lastPathComponent.hasPrefix("huddle-")
     }
 
     private func header(_ ws: PlanWorkspace) -> some View {

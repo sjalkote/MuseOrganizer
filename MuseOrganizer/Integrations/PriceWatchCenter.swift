@@ -76,14 +76,12 @@ final class PriceWatchCenter {
                     live = board.live
                 }
                 loadedBoards.insert(plan.id)
-            } else {
-                if plan.kind == .decision, let request = plan.watchRequest, watches(for: plan.id).isEmpty {
-                    _ = try await api.addWatch(planID: plan.id, request)
-                }
-                let out = try await api.watches(planID: plan.id)
-                withAnimation(Motion.smooth) { watches[plan.id] = out.watches }
-                if live == nil { live = try? await api.status().live }
+            } else if plan.kind == .decision, let request = plan.watchRequest, watches(for: plan.id).isEmpty {
+                _ = try await api.addWatch(planID: plan.id, request)
             }
+            let out = try await api.watches(planID: plan.id)
+            withAnimation(Motion.smooth) { watches[plan.id] = out.watches }
+            if live == nil { live = try? await api.status().live }
             error = nil
         } catch {
             self.error = error.localizedDescription

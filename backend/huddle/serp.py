@@ -1,6 +1,6 @@
 """SerpApi client. Cache-first: every live response is saved under fixtures/serpapi/ and replayed.
 
-With no SERPAPI_API_KEY, cache misses return a small synthetic response shaped like the real one.
+Cache misses call SerpAPI. Synthetic responses are only for pytest (HUDDLE_OFFLINE=1).
 Docs: https://serpapi.com/search-api, /google-maps-api, /google-maps-directions-api, /extract-api.
 """
 import hashlib
@@ -14,9 +14,8 @@ from pathlib import Path
 import httpx
 
 URL = "https://serpapi.com/search"
-KEY = os.environ.get("SERPAPI_API_KEY")
 CACHE = Path(__file__).parent.parent / "fixtures" / "serpapi"
-LIVE = bool(KEY)
+LIVE = bool(os.environ.get("SERPAPI_API_KEY"))
 # Mock prices move every DRIFT seconds on fresh searches, so price watches have something to react to offline.
 DRIFT = float(os.environ.get("HUDDLE_MOCK_DRIFT", "60"))
 
@@ -96,13 +95,18 @@ def search(engine, fresh=False, **params):
     """Cached unless fresh=True (price watches), which always asks SerpApi and refreshes the cache."""
     params = {"engine": engine, **params}
     path = _cache_path(params)
-    if path.exists() and not fresh:
+    offline = os.environ.get("HUDDLE_OFFLINE") == "1"
+    # Live responses are replayed from disk. Pytest stays on the synthetic responses. Fresh watches skip the cache.
+    if path.exists() and not fresh and not offline:
         return json.loads(path.read_text())
-    if not KEY:
-        return _synthetic(params, fresh)
+    key = os.environ.get("SERPAPI_API_KEY")
+    if not key:
+        if offline:
+            return _synthetic(params, fresh)
+        raise RuntimeError("SERPAPI_API_KEY is required")
     if fresh:
         params["no_cache"] = "true"  # SerpApi's own hour-long cache would hide price changes
-    r = httpx.get(URL, params={**params, "api_key": KEY}, timeout=60)
+    r = httpx.get(URL, params={**params, "api_key": key}, timeout=60)
     r.raise_for_status()
     CACHE.mkdir(parents=True, exist_ok=True)
     path.write_text(r.text)

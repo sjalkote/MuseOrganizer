@@ -14,7 +14,7 @@ By default the app uses `SimulatedWorkspaceService`: same UI and events, realist
 ```
 iPhone (Huddle)                     Huddle backend                         External
 ────────────────                    ──────────────                         ────────
-Build folder tap ──POST /plans/:id/workspace──▶ start build ──▶ SerpApi searches from the blueprint
+Build folder tap ──POST /plans/:id/workspace──▶ Muse chooses searches and files ──▶ live SerpApi
                                                     │                 │
 progress UI ◀──SSE /builds/:id/events──── events ◀──┤                 ├─▶ Muse Spark (polishes prose)
                                                     │                 │
@@ -52,7 +52,9 @@ The blueprints in `MuseOrganizer/Models/Workspace.swift` show the exact calls an
 
 ## 3. Muse Spark
 
-The build itself is a fixed pipeline in `backend/huddle/workspace.py`, not a model-driven tool loop: it runs each SerpApi search in the blueprint, computes the Sheets and Docs from the results, and asks Muse Spark (`muse.explain`, via `MODEL_API_KEY`) only to polish prose (the Daily intro and the car's Decision summary). Every number comes from a search result or from the plan's own context. Without `MODEL_API_KEY` the facts-only draft is used.
+Sign in at [dev.meta.ai](https://dev.meta.ai) (the Model API is US-only), create a key on the API keys tab, and set `MODEL_API_KEY` in `backend/.env`. Keys look like `LLM_…`. Leave `MUSE_SPARK_MODEL=muse-spark-1.3`. Credits from a program show on that dashboard under Billing and Usage. The in-app “25 credits this week” meter is a local demo counter, not that balance.
+
+Folder builds currently use the local chooser in `heuristic_outputs`, not Muse. Turn Muse back on with [RESTORE_MUSE.md](RESTORE_MUSE.md). When that is on, Muse calls `select_outputs` to choose the searches and files, then `explain` to polish the Daily intro and the decision summary. It does not invent prices. SerpAPI supplies the numbers. A build from the app returns 503 if `SERPAPI_API_KEY` is missing. Pytest sets `HUDDLE_OFFLINE=1`.
 
 What the backend researches and writes:
 
@@ -64,14 +66,19 @@ What the backend researches and writes:
 | Car | Market prices (Sheet) | Google Shopping listings and their average |
 | Car | Dealer visit prep (Doc) | Maps dealers, an APR found in Google results, lease offers |
 | Car | Decision summary (Doc) | Market average vs. buyout price, the group's votes |
+| Movie night | Showtimes (Sheet), Evening plan (Doc) | Theater and showtime search, food nearby |
+| Outing | Plan (Doc), Budget only when prices come back | Maps places and food |
+| Shopping | Shopping list (Sheet) | Item, price, and source |
+| Anything else | Overview (Doc), a Sheet only when results have prices | One web search |
 
-Any other file in the blueprint (e.g. the car's Cost comparison) is written exactly as the app sent it. The car files are marked "Simulated account data", since the buyout price and votes are demo numbers.
+A file list the app already sent is written as sent. “Simulated account data” appears only on the lease demo, when the plan carries a buyout price. Prices in every other file come from SerpAPI or from the plan.
 
 ## 4. Backend contract
 
 ```
-POST   /plans/{planId}/workspace   body: the blueprint (see below)  → 202 { "buildId": "…", "mode": "google" | "mock" }
+POST   /plans/{planId}/workspace   body: the plan snapshot (see below)  → 202 { "buildId": "…", "mode": "google" }
 GET    /builds/{buildId}/events    text/event-stream (replays from the start, then follows)
+  event: planned       data: { "folderName", "calls": [{ "id", "engine", "query" }], "files": [{ "id", "name", "kind" }] }
   event: researching   data: { "id": "<call id>", "engine": "google_flights", "query": "…" }
   event: researched    data: { "id": "<call id>", "result": "14 itineraries", "duration": 2.1 }
   event: writing       data: { "id": "<file id>", "name": "Budget Tracker", "kind": "sheet" }
@@ -86,29 +93,31 @@ GET  /auth/google/start             browser sign-in (redirects to Google, back t
 POST /auth/google/code              { "serverAuthCode": "…" } from GoogleSignIn-iOS
 ```
 
-Blueprint body: `folderName`, `kind`, `members`, `context` (`year`, `budgetPerPerson`, `buyoutPrice`, `decision`, `votes`), `calls` (`id`, `engine`, `query`, optional `params` to override what's parsed from the query) and `files` (`id`, `name`, `kind`, `summary`, `sources`, `content`). Ids are the app's UUIDs; every event echoes them, so `BuildSession` progress lines up. Flight queries must look like `AUS → HND, Mar 26 – Apr 4, 4 adults` and hotel queries like `Shinjuku, Mar 26 – 30, 2 rooms`, or carry `params`.
+Snapshot body: `name` (or `folderName`), `kind`, `members`, `decisions`, `options`, `itinerary`, `notes`, `messages`, and `context` (`year`, `budgetPerPerson`, `buyoutPrice`, `decision`, `votes`, `vehicle`, `location`). Muse chooses `calls` and `files`. A body that already includes both is still accepted, so the trip and car fixtures keep working. Ids on the `planned` event are UUIDs; later events echo them. Flight queries look like `AUS → HND, Mar 26 – Apr 4, 4 adults` and hotel queries like `Shinjuku, Mar 26 – 30, 2 rooms`.
+
+`finished` includes the folder URL (`https://drive.google.com/drive/folders/…`) and each file's `webViewLink`. The app opens that URL. A mock URL uses a `huddle-` prefix and stays in the app.
 
 The refresh token is stored in the backend's SQLite database (`google_tokens`, one account per backend for now).
 
 ## 5. Run it
 
-**Mock (no keys):**
+**App (live keys required):**
 
 ```
 cd backend
-uv run --env-file .env uvicorn huddle.api:app --host 0.0.0.0 --port 8000
+uv run --env-file .env uvicorn huddle.api:app --host 127.0.0.1 --port 8000
 ```
 
-Run the app with the launch argument `-HUDDLE_BACKEND_URL http://localhost:8000` (Edit Scheme → Run → Arguments), or set the `HUDDLE_BACKEND_URL` build setting in `project.yml` and run `xcodegen generate`. On a real phone use the Mac's LAN address. Without it the app keeps using `SimulatedWorkspaceService`. Tap **Build folder in Google Drive**; files land in `backend/fixtures/drive/<plan>/`.
+The iOS build setting `HUDDLE_BACKEND_URL` is `http://127.0.0.1:8000`, which the Simulator can reach. A build returns 503 until `SERPAPI_API_KEY` is set. It does not need a Muse key. Without a connected Drive account the same files are written locally and shown in the app.
 
 **Live:**
 
 1. Do section 1 and put the web client's id and secret in `backend/.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`). Add `http://localhost:8000/auth/google/callback` as an authorized redirect URI.
-2. Add `SERPAPI_API_KEY` (and `MODEL_API_KEY` for Muse polish).
+2. Add `SERPAPI_API_KEY`. Muse is off; follow [RESTORE_MUSE.md](RESTORE_MUSE.md) before setting `MODEL_API_KEY`.
 3. Restart the backend and open `http://localhost:8000/auth/google/start` once to connect Drive. `GET /auth/google/status` should say `"connected": true`.
-4. Build a folder from the app. The finished event's `url` is the real, link-shared Drive folder.
+4. Build a folder from the app. The finished event's `url` is the real, link-shared Drive folder. **Open in Google Drive** opens that URL.
 
-Still to do in the app: replace the simulated sign-in in `ConnectGoogleSheet` with GoogleSignIn-iOS (send `serverAuthCode` to `/auth/google/code`), and make **Open in Google Drive** in `FolderView` open `workspace.url`.
+The in-app Connect sheet still records a local display name. The refresh token comes from the browser flow above. Do not commit `.env`.
 
 ## Test checklist
 

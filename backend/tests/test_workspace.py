@@ -70,7 +70,7 @@ def test_search_params_read_the_query():
 def test_trip_build_streams_every_step_with_the_apps_ids():
     events = build(TRIP)
     kinds = [k for k, _ in events]
-    assert kinds == ["researching", "researched"] * 6 + ["writing", "wrote"] * 3 + ["finished"]
+    assert kinds == ["planned"] + ["researching", "researched"] * 6 + ["writing", "wrote"] * 3 + ["finished"]
     assert [d["id"] for k, d in events if k == "researched"] == [c["id"] for c in TRIP["calls"]]
     assert [d["id"] for k, d in events if k == "wrote"] == ["budget", "daily", "food"]
     done = events[-1][1]
@@ -141,9 +141,71 @@ def test_google_needs_sign_in_once_configured(monkeypatch):
     assert client.get("/auth/google/status").json() == {"mode": "mock", "configured": False, "connected": False}
     monkeypatch.setattr(google, "CLIENT_ID", "id")
     monkeypatch.setattr(google, "CLIENT_SECRET", "secret")
-    assert client.post("/plans/p1/workspace", json=TRIP).status_code == 409
+    # Drive is optional: a configured client with no sign-in still builds the folder locally.
+    started = client.post("/plans/p1/workspace", json=TRIP)
+    assert started.status_code == 202 and started.json()["mode"] == "local"
     r = client.get("/auth/google/start", follow_redirects=False)
     assert r.status_code == 307 and "drive.file" in r.headers["location"] and "access_type=offline" in r.headers["location"]
+
+
+def planned(events):
+    return next(d for k, d in events if k == "planned")
+
+
+def test_movie_night_is_showtimes_not_a_trip():
+    events = build({"name": "Friday movie night", "members": ["Devin", "Maya"],
+                    "notes": "Find a theater and showtimes, then food nearby"})
+    files = {f["name"] for f in planned(events)["files"]}
+    engines = {c["engine"] for c in planned(events)["calls"]}
+    assert files == {"Showtimes", "Evening plan"} and engines == {"google", "google_maps"}
+    assert events[-1][0] == "finished"
+    assert (folder("Friday movie night") / "Showtimes.csv").exists()
+
+
+def test_outing_shopping_and_notes_pick_different_files():
+    hike = build({"name": "Saturday hike", "notes": "Greenbelt trail"})
+    assert [f["name"] for f in planned(hike)["files"]] == ["Plan"] and hike[-1][0] == "finished"
+    shop = build({"name": "Saturday groceries", "kind": "shopping", "options": [{"title": "Milk", "price": "$4"}]})
+    assert [f["name"] for f in planned(shop)["files"]] == ["Shopping list"]
+    assert "Milk" in (folder("Saturday groceries") / "Shopping list.csv").read_text()
+    notes = build({"name": "Talk", "notes": "We should talk about this later."})
+    assert [f["name"] for f in planned(notes)["files"]] == ["Overview"] and notes[-1][0] == "finished"
+
+
+def test_japan_snapshot_searches_flights():
+    events = build({
+        "name": "Japan Trip 2027", "kind": "trip", "members": ["Devin", "Sam", "Maya", "Jordan"],
+        "decisions": [{"title": "Dates", "choice": "Mar 26 – Apr 4"}, {"title": "Stays", "choice": "Shinjuku and Kyoto"}],
+        "messages": ["find flights from Austin to Tokyo"], "context": {"budgetPerPerson": "2500"},
+    })
+    names = {f["name"] for f in planned(events)["files"]}
+    assert "google_flights" in {c["engine"] for c in planned(events)["calls"]}
+    assert "Budget Tracker" in names and "Market prices" not in names
+    assert events[-1][0] == "finished"
+
+
+def test_muse_cannot_invent_a_budget_or_itinerary(monkeypatch):
+    monkeypatch.setenv("MUSE_ENABLED", "1")
+    monkeypatch.setenv("MODEL_API_KEY", "test")
+    monkeypatch.setattr(workspace.muse, "select_outputs", lambda plan: {
+        "calls": [{"engine": "google", "query": "talk"}],
+        "files": [{"role": "budget", "name": "Budget"}, {"role": "daily", "name": "Daily"}],
+    })
+    events = build({"name": "Talk", "notes": "We should talk about this later."})
+    assert events[-1][0] == "failed" and "did not choose" in events[-1][1]["message"]
+
+
+def test_live_build_needs_serp_not_muse_or_drive(monkeypatch):
+    monkeypatch.delenv("HUDDLE_OFFLINE")
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("MUSE_ENABLED", raising=False)
+    monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
+    missing = client.post("/plans/p1/workspace", json={"name": "Friday movie night"})
+    assert missing.status_code == 503 and "SERPAPI" in missing.text and "Muse" not in missing.text
+    monkeypatch.setenv("SERPAPI_API_KEY", "test")
+    monkeypatch.setattr(workspace.serp, "search", lambda *a, **k: {"organic_results": []})
+    started = client.post("/plans/p1/workspace", json={"name": "Friday movie night"})
+    assert started.status_code == 202 and started.json()["mode"] == "local"
 
 
 def test_doc_requests_count_utf16_and_style_blocks():

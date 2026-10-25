@@ -145,6 +145,17 @@ enum Mock {
 
     // MARK: Car
 
+    static let movieDecisions: [Decision] = [
+        Decision(title: "Movie", symbol: "film", tint: .activities, state: .open("Not picked")),
+        Decision(title: "When", symbol: "calendar", tint: .dates, state: .decided("Friday night")),
+        Decision(title: "Food after", symbol: "fork.knife", tint: .stays, state: .open("Somewhere nearby")),
+    ]
+
+    static let movieMessages: [Message] = [
+        Message(senderID: "maya", body: .text("Friday movie night? I can do after 7."), time: "5:12 PM"),
+        Message(senderID: "devin", body: .text("Yes. Find showtimes and somewhere to eat after."), time: "5:14 PM"),
+    ]
+
     static let carDecisions: [Decision] = [
         Decision(title: "Keep a Toyota", symbol: "car", tint: .car, state: .decided("Everyone agrees")),
         Decision(title: "Buy out or return", symbol: "arrow.left.arrow.right", tint: .money, state: .voting("Buy out leads, 3 of 4")),

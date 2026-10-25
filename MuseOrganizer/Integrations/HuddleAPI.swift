@@ -30,7 +30,7 @@ struct HuddleAPI {
     struct Watches: Decodable { var watches: [PriceWatch]; var alerts: [PriceAdvice] }
     struct Checked: Decodable { var alerts: [PriceAdvice]; var watches: [PriceWatch] }
     struct Alerts: Decodable { var alerts: [PriceAdvice]; var now: Double }
-    struct Answer: Decodable { var text: String; var live: Bool }
+    struct Answer: Decodable { var text: String; var live: Bool; var options: [Board.Option] }
     struct Status: Decodable { var muse: Bool; var serpapi: Bool; var watchInterval: Double }
 
     func status() async throws -> Status { try await get("status") }
@@ -38,8 +38,8 @@ struct HuddleAPI {
     func watches(planID: String) async throws -> Watches { try await get("plans/\(planID)/watches") }
     func check(planID: String) async throws -> Checked { try await post("plans/\(planID)/watches/check", Empty()) }
     func alerts(since: Double) async throws -> Alerts { try await get("alerts", query: ["since": String(since)]) }
-    func ask(planID: String, question: String) async throws -> Answer {
-        try await post("plans/\(planID)/ask", ["question": question])
+    func ask(planID: String, question: String, name: String, kind: String) async throws -> Answer {
+        try await post("plans/\(planID)/ask", ["question": question, "name": name, "kind": kind])
     }
     func addWatch(planID: String, _ request: WatchRequest) async throws -> PriceWatch {
         try await post("plans/\(planID)/watches", request)

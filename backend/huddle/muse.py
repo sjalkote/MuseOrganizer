@@ -60,6 +60,28 @@ TRADEOFF_TOOL = {"type": "function", "function": {
                                    "properties": {"id": {"type": "string"}, "text": {"type": "string"}}},
     }}},
 }}
+SELECT_SYSTEM = (
+    "You are Muse, choosing the research and the Google Drive files for one group plan. "
+    "Call select_outputs once. Engines: google, google_flights, google_hotels, google_maps, google_shopping. "
+    "Roles: budget, daily, places, comparison, market, dealer, decision, showtimes, evening, outing, shopping, overview. "
+    "Match the plan. A movie night is not a flight search. A hike is not a car lease. A grocery list is one shopping sheet. "
+    "Flight queries must look like 'AUS → HND, Mar 26 – Apr 4, 4 adults'. "
+    "Hotel queries must look like 'Shinjuku, Mar 26 – 30, 2 rooms'. "
+    "Do not invent prices, dates, or airports that are not in the plan."
+)
+SELECT_TOOL = {"type": "function", "function": {
+    "name": "select_outputs",
+    "description": "Choose the SerpAPI searches and the Sheets and Docs for this plan.",
+    "parameters": {"type": "object", "properties": {
+        "calls": {"type": "array", "items": {"type": "object", "properties": {
+            "engine": {"type": "string"}, "query": {"type": "string"},
+            "params": {"type": "object"},
+        }, "required": ["engine", "query"]}},
+        "files": {"type": "array", "items": {"type": "object", "properties": {
+            "role": {"type": "string"}, "name": {"type": "string"},
+        }, "required": ["role"]}},
+    }, "required": ["calls", "files"]},
+}}
 
 
 def _schema_tool(fields):
@@ -125,6 +147,19 @@ class Muse:
             {"role": "user", "content": f"PLAN:\n{json.dumps(plan)}\n\nQUESTION:\n{question}"},
         ])
         return msg.get("content") or ""
+
+    def select_outputs(self, plan):
+        """Muse picks the SerpAPI searches and Drive files for this plan. Raises if it declines."""
+        msg = self._chat(
+            [{"role": "system", "content": SELECT_SYSTEM},
+             {"role": "user", "content": json.dumps(plan, default=str)[:12000]}],
+            tools=[SELECT_TOOL],
+            tool_choice={"type": "function", "function": {"name": "select_outputs"}},
+        )
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            raise ValueError("Muse did not choose any files")
+        return json.loads(calls[0]["function"]["arguments"])
 
     def transcribe(self, wav: bytes) -> str:
         # WAV only: mono, 16-bit PCM, 16 or 24 kHz, <=10 min.
@@ -203,6 +238,10 @@ class MockMuse:
             return f"{demo} {w['advice']['headline']}. My call: {verdict}. {w['advice']['reason']}"
         w = min(topic, key=lambda w: w["current"])
         return f"{demo} I'm watching {len(topic)} prices. Lowest: {w['label']} at ${w['current']:,.0f} {w.get('unit', '')}.".rstrip()
+
+    def select_outputs(self, plan):
+        from .workspace import heuristic_outputs
+        return heuristic_outputs(plan)
 
     def transcribe(self, wav):
         return "We need 7 seats and I'd like to keep it under $650 a month."

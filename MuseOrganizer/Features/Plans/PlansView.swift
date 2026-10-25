@@ -34,9 +34,9 @@ struct PlansView: View {
                 if let plan = model.plan(id) { PlanView(plan: plan) }
             }
             .sheet(isPresented: $showNewPlan) {
-                NewPlanSheet {
+                NewPlanSheet { name, source, chat in
                     showNewPlan = false
-                    model.plansPath = ["japan"]
+                    model.addPlan(name: name, source: source, chat: chat)
                 }
             }
         }
@@ -46,8 +46,22 @@ struct PlansView: View {
 private struct PlanRow: View {
     var plan: Plan
 
-    private var tint: Tint { plan.kind == .trip ? .flights : plan.kind == .gathering ? .stays : .car }
-    private var symbol: String { plan.kind == .trip ? "airplane" : plan.kind == .gathering ? "fork.knife" : "car.fill" }
+    private var tint: Tint {
+        switch plan.kind {
+        case .trip: .flights
+        case .gathering: .stays
+        case .general: .activities
+        case .decision: .car
+        }
+    }
+    private var symbol: String {
+        switch plan.kind {
+        case .trip: "airplane"
+        case .gathering: "fork.knife"
+        case .general: "sparkles"
+        case .decision: "car.fill"
+        }
+    }
 
     var body: some View {
         Panel(padding: 0) {

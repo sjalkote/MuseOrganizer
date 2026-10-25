@@ -276,7 +276,14 @@ def near(area, groups):
     return [p for a, places in groups if words & set(a.lower().split()) for p in places]
 
 
+def builds_use_muse():
+    """Folder builds skip Muse until this is turned back on. See docs/RESTORE_MUSE.md."""
+    return os.environ.get("MUSE_ENABLED") == "1" and bool(os.environ.get("MODEL_API_KEY"))
+
+
 def polish(facts, draft):
+    if not builds_use_muse():
+        return draft
     try:
         return muse.explain(facts, draft)
     except Exception:  # Muse is a nicety here; the facts-only draft is fine
@@ -395,13 +402,26 @@ SIMULATED = "Simulated account data: the buyout price and votes are demo numbers
 
 
 def listings(r):
+    """Priced cars. Shopping rarely lists used cars, so a 'for sale' web search counts too."""
     out = []
+
+    def add(title, price, source, blob):
+        if not price or price < 1000:
+            return
+        miles = re.search(r"([\d,]{4,})\s*mi", blob)
+        out.append({"title": title, "price": price, "source": source,
+                    "miles": int(miles.group(1).replace(",", "")) if miles else None})
+
     for _, data in r.of("google_shopping"):
         for item in data.get("shopping_results", []):
-            if item.get("extracted_price"):
-                miles = re.search(r"([\d,]{4,})\s*mi", item["title"] + " " + item.get("snippet", ""))
-                out.append({"title": item["title"], "price": item["extracted_price"], "source": item.get("source", ""),
-                            "miles": int(miles.group(1).replace(",", "")) if miles else None})
+            add(item.get("title") or "Listing", item.get("extracted_price"), item.get("source", ""),
+                item.get("title", "") + " " + item.get("snippet", ""))
+    for call, data in r.of("google"):
+        if "for sale" not in call["query"].lower():
+            continue
+        for item in data.get("organic_results", []):
+            add(item.get("title") or "Listing", first_price({"organic_results": [item]}), "Google Search",
+                item.get("title", "") + " " + item.get("snippet", ""))
     return out
 
 
@@ -413,7 +433,13 @@ def market_prices(r):
     rows = [[i["title"], f"{i['miles']:,}" if i["miles"] else "", money(i["price"]), i["source"]] for i in items[:10]]
     rows.append([f"Average of {len(items)}", "", money(avg), ""])
     buyout = r.plan.get("context", {}).get("buyoutPrice")
-    footer = f"Your buyout price: {money(float(buyout))} · {SIMULATED}" if buyout else SIMULATED
+    simulated = bool(buyout) or r.plan.get("context", {}).get("simulated")
+    if buyout and simulated:
+        footer = f"Your buyout price: {money(float(buyout))} · {SIMULATED}"
+    elif buyout:
+        footer = f"Your buyout price: {money(float(buyout))}"
+    else:
+        footer = SIMULATED if simulated else None
     content = {"columns": ["Listing", "Miles", "Price", "Seller"], "rows": rows, "footer": footer}
     return content, f"{len(items)} similar cars for sale", ["Google Shopping"]
 
@@ -440,7 +466,8 @@ def dealer_prep(r):
     if offers:
         blocks.append({"type": "heading", "text": "Current offers to mention"})
         blocks += [{"type": "bullet", "text": f"{o['title']} · {o['link']}"} for o in offers[:3]]
-    blocks.append({"type": "paragraph", "text": SIMULATED})
+    if r.plan.get("context", {}).get("buyoutPrice") or r.plan.get("context", {}).get("simulated"):
+        blocks.append({"type": "paragraph", "text": SIMULATED})
     return {"blocks": blocks}, f"What to bring and ask · {len(dealers)} dealers", ["Google Maps", "Google Search"]
 
 
@@ -463,18 +490,306 @@ def decision_summary(r):
         draft.append(ctx["votes"])
     title = f"{r.plan['folderName']}: {ctx['decision']}" if ctx.get("decision") else f"{r.plan['folderName']}: decision"
     blocks = [{"type": "title", "text": title},
-              {"type": "paragraph", "text": polish(facts, " ".join(draft) or "Not enough listings to compare yet.")},
-              {"type": "paragraph", "text": SIMULATED}]
+              {"type": "paragraph", "text": polish(facts, " ".join(draft) or "Not enough listings to compare yet.")}]
+    if ctx.get("buyoutPrice") or ctx.get("simulated"):
+        blocks.append({"type": "paragraph", "text": SIMULATED})
     return {"blocks": blocks}, "Why the group chose it", ["Google Shopping"]
 
 
+def comparison(r):
+    rows = []
+    for o in r.plan.get("options") or []:
+        if not isinstance(o, dict):
+            continue
+        votes = o.get("votes")
+        if isinstance(votes, list):
+            votes = len(votes)
+        rows.append([o.get("title") or "Option", str(o.get("monthly") or o.get("price") or ""),
+                     str(o.get("total") or ""), "" if votes is None else str(votes)])
+    if not rows:
+        rows = [[i["title"], "", money(i["price"]), ""] for i in listings(r)[:6]]
+    if not rows:
+        raise ValueError("Cost comparison needs options or priced listings")
+    footer = SIMULATED if r.plan.get("context", {}).get("buyoutPrice") or r.plan.get("context", {}).get("simulated") else None
+    content = {"columns": ["Option", "Monthly", "Total", "Votes"], "rows": rows, "footer": footer}
+    return content, f"{len(rows)} options", ["Plan"]
+
+
+def showtimes(r):
+    rows = []
+    for _, data in r.of("google"):
+        for item in data.get("organic_results", [])[:8]:
+            price = first_price({"organic_results": [item]})
+            rows.append([item.get("title") or "Show", (item.get("snippet") or "")[:90],
+                         money(price) if price else "", "Google Search"])
+    for _, data in r.of("google_maps"):
+        for p in data.get("local_results", [])[:6]:
+            if any(w in (p.get("type") or "").lower() for w in ("restaurant", "food")):
+                continue
+            rows.append([p.get("title") or "Theater", p.get("address") or "", p.get("price") or "", "Google Maps"])
+    if not rows:
+        raise ValueError("Showtimes needs a search with theaters or listings")
+    content = {"columns": ["Show", "Detail", "Price", "Source"], "rows": rows, "footer": None}
+    return content, f"{len(rows)} showtimes", ["Google Search", "Google Maps"]
+
+
+def evening(r):
+    blocks = [{"type": "title", "text": f"{r.plan['folderName']} · Evening"}, {"type": "heading", "text": "The movie"}]
+    for _, data in r.of("google"):
+        blocks += [{"type": "bullet", "text": f"{item.get('title', '')} · {(item.get('snippet') or '')[:100]}"}
+                   for item in data.get("organic_results", [])[:5]]
+    food = r.places(food=True)
+    if food:
+        blocks.append({"type": "heading", "text": "Food nearby"})
+        for area, places in food:
+            blocks += [{"type": "bullet", "text": place_line(p)} for p in places[:4]]
+    if len(blocks) == 2:
+        blocks.append({"type": "paragraph", "text": r.plan.get("notes") or "No showtimes in the search yet."})
+    return {"blocks": blocks}, "Evening plan", ["Google Search", "Google Maps"]
+
+
+def outing_doc(r):
+    blocks = [{"type": "title", "text": r.plan["folderName"]}, {"type": "heading", "text": "Where"}]
+    seen = set()
+    for _, data in r.of("google_maps"):
+        for p in data.get("local_results", [])[:6]:
+            if p.get("title") in seen:
+                continue
+            seen.add(p.get("title"))
+            blocks.append({"type": "bullet", "text": place_line(p)})
+    if r.plan.get("notes"):
+        blocks.append({"type": "paragraph", "text": r.plan["notes"]})
+    if len(blocks) == 2:
+        blocks.append({"type": "paragraph", "text": "Nothing booked yet."})
+    return {"blocks": blocks}, f"{max(len(seen), 0)} places", ["Google Maps"]
+
+
+def shopping_sheet(r):
+    rows = []
+    for o in r.plan.get("options") or []:
+        if isinstance(o, dict) and o.get("title"):
+            rows.append([o["title"], o.get("detail") or "", str(o.get("price") or ""), o.get("source") or "Plan"])
+    for _, data in r.of("google_shopping"):
+        for item in data.get("shopping_results", [])[:8]:
+            rows.append([item.get("title") or "Item", "", item.get("price") or "", item.get("source") or "Google Shopping"])
+    if not rows:
+        raise ValueError("Shopping list needs items or shopping results")
+    content = {"columns": ["Item", "Detail", "Price", "Source"], "rows": rows, "footer": None}
+    return content, f"{len(rows)} items", ["Google Shopping", "Plan"]
+
+
+def overview(r):
+    blocks = [{"type": "title", "text": r.plan["folderName"]}]
+    if r.plan.get("notes"):
+        blocks.append({"type": "paragraph", "text": r.plan["notes"]})
+    blocks.append({"type": "heading", "text": "What we found"})
+    found = 0
+    for _, data in r.of("google"):
+        for item in data.get("organic_results", [])[:6]:
+            found += 1
+            blocks.append({"type": "bullet", "text": f"{item.get('title', '')} · {item.get('link', '')}"})
+    for d in r.plan.get("decisions") or []:
+        if isinstance(d, dict) and d.get("title"):
+            blocks.append({"type": "bullet", "text": f"{d['title']}: {d.get('choice') or d.get('value') or ''}".rstrip(": ")})
+    return {"blocks": blocks}, f"{found} sources" if found else "Plan overview", ["Google Search"]
+
+
+ROLES = {
+    "budget": ("sheet", "Budget"),
+    "daily": ("doc", "Daily"),
+    "places": ("doc", "Places to stay + food"),
+    "comparison": ("sheet", "Cost comparison"),
+    "market": ("sheet", "Market prices"),
+    "dealer": ("doc", "Dealer visit prep"),
+    "decision": ("doc", "Decision summary"),
+    "showtimes": ("sheet", "Showtimes"),
+    "evening": ("doc", "Evening plan"),
+    "outing": ("doc", "Plan"),
+    "shopping": ("sheet", "Shopping list"),
+    "overview": ("doc", "Overview"),
+}
+ENGINES = {"google", "google_flights", "google_hotels", "google_maps", "google_shopping"}
+ROLE_WRITERS = {"budget": budget, "daily": daily, "places": stay_and_food, "comparison": comparison,
+                "market": market_prices, "dealer": dealer_prep, "decision": decision_summary,
+                "showtimes": showtimes, "evening": evening, "outing": outing_doc,
+                "shopping": shopping_sheet, "overview": overview}
 WRITERS = {"budget tracker": budget, "daily": daily, "places to stay + food": stay_and_food,
            "market prices": market_prices, "dealer visit prep": dealer_prep, "decision summary": decision_summary}
 
 
+def plan_blob(plan):
+    parts = [plan.get("folderName") or "", plan.get("name") or "", plan.get("notes") or "", plan.get("kind") or ""]
+    parts += [str(m) for m in plan.get("messages") or []]
+    for d in plan.get("decisions") or []:
+        if isinstance(d, dict):
+            parts.append(f"{d.get('title', '')} {d.get('choice') or d.get('value') or ''}")
+    for o in plan.get("options") or []:
+        if isinstance(o, dict):
+            parts.append(" ".join(str(o.get(k) or "") for k in ("title", "detail", "category", "price")))
+    parts += [f"{k} {v}" for k, v in (plan.get("context") or {}).items()]
+    for day in plan.get("itinerary") or []:
+        if isinstance(day, dict):
+            parts.append(f"{day.get('date') or ''} {day.get('city') or ''}")
+            for slot in day.get("slots") or []:
+                if isinstance(slot, dict):
+                    parts.append(" ".join(str(slot.get(k) or "") for k in ("time", "title", "detail")))
+    return " ".join(parts)
+
+
+def plan_name(plan):
+    return plan.get("folderName") or plan.get("name") or "Plan"
+
+
+def classify(plan):
+    """Which pack of files this plan is. Movie is checked before trip so a movie night never gets flights."""
+    low, kind = plan_blob(plan).lower(), (plan.get("kind") or "").lower()
+    def word(w):
+        return re.search(rf"\b{re.escape(w)}\b", low) is not None
+    if kind == "movie" or any(word(w) for w in ("movie", "theater", "theatre", "cinema", "showtimes", "showtime")):
+        return "movie"
+    if kind in {"shopping", "shop"} or any(word(w) for w in ("grocery", "groceries")) or "shopping list" in low:
+        return "shopping"
+    if kind in {"car", "lease"} or any(word(w) for w in ("rav4", "lease", "buyout", "dealer", "toyota")):
+        return "car"
+    if kind == "decision" and any(word(w) for w in ("car", "suv", "lease")):
+        return "car"
+    if kind in {"trip", "travel"} or any(word(w) for w in ("flight", "flights", "hotel", "itinerary", "airport")):
+        return "trip"
+    if kind == "outing" or any(word(w) for w in ("hike", "outing", "picnic", "trail")):
+        return "outing"
+    return "other"
+
+
+def flight_query(plan):
+    text = plan_blob(plan)
+    dates = DATES.search(text)
+    adults = max(len(plan.get("members") or []), 1)
+    pair = re.search(r"([A-Z]{3})\s*(?:→|->|to)\s*([A-Z]{3})", text)
+    if pair and dates:
+        return f"{pair.group(1)} → {pair.group(2)}, {dates.group(0)}, {adults} adults"
+    low = text.lower()
+    if dates and "austin" in low and any(w in low for w in ("japan", "tokyo", "hnd")):
+        return f"AUS → HND, {dates.group(0)}, {adults} adults"
+    return None
+
+
+def heuristic_outputs(plan):
+    """Offline stand-in for Muse's select_outputs. Same roles the live model is allowed to pick."""
+    kind, text, low = classify(plan), plan_blob(plan), plan_blob(plan).lower()
+    name = plan_name(plan)
+    dates = DATES.search(text)
+    span = dates.group(0) if dates else None
+
+    def call(engine, query):
+        return {"engine": engine, "query": query}
+
+    def file(role, title=None):
+        kind_name, default = ROLES[role]
+        return {"role": role, "name": title or default, "kind": kind_name}
+
+    if kind == "movie":
+        return {"calls": [call("google", f"{name} showtimes theater"), call("google_maps", f"restaurants near {name}")],
+                "files": [file("showtimes"), file("evening")]}
+    if kind == "shopping":
+        return {"calls": [call("google_shopping", name)], "files": [file("shopping")]}
+    if kind == "car":
+        loc = (plan.get("context") or {}).get("location") or ("Austin" if "austin" in low else "")
+        place = " ".join(loc.replace(",", " ").split())
+        vehicle = (plan.get("context") or {}).get("vehicle") or "2023 Toyota RAV4 XLE"
+        # Google Shopping does not return used-car listings. Prices come from a for-sale web search.
+        calls = [call("google", f"{vehicle} for sale {place}".strip()),
+                 call("google", "auto loan rates for a lease buyout" if any(w in low for w in ("lease", "buyout")) else f"{vehicle} reviews"),
+                 call("google_maps", f"dealers near {place or 'me'}")]
+        files = [file("comparison"), file("market"), file("decision")]
+        if "dealer" in low:
+            files.append(file("dealer"))
+        return {"calls": calls, "files": files}
+    if kind == "trip":
+        calls, cities = [], [label for key, label in (("shinjuku", "Shinjuku"), ("kyoto", "Kyoto"), ("tokyo", "Tokyo")) if key in low]
+        fq = flight_query(plan)
+        if fq:
+            calls.append(call("google_flights", fq))
+        if span and cities:
+            calls.append(call("google_hotels", f"{cities[0]}, {span}, 2 rooms"))
+            calls.append(call("google_maps", f"best food, {cities[0]}"))
+            calls.append(call("google_maps", f"top things to do, {cities[-1]}"))
+            if len(cities) > 1:
+                calls.append(call("google", f"train {cities[0]} to {cities[-1]} fare"))
+        if not calls:
+            calls.append(call("google", f"{name} travel"))
+        files = []
+        engines = {c["engine"] for c in calls}
+        if engines & {"google_flights", "google_hotels", "google"}:
+            files.append(file("budget", "Budget Tracker"))
+        if engines & {"google_flights", "google_hotels"}:
+            files += [file("daily"), file("places")]
+        return {"calls": calls, "files": files or [file("overview")]}
+    if kind == "outing":
+        files = [file("outing")]
+        if "$" in text:
+            files.append(file("budget"))
+        return {"calls": [call("google_maps", name), call("google_maps", f"food near {name}")], "files": files}
+    return {"calls": [call("google", name)], "files": [file("overview")]}
+
+
+def _keep_role(role, calls, plan):
+    engines = {c["engine"] for c in calls}
+    if role == "daily":
+        return bool(engines & {"google_flights", "google_hotels"})
+    if role == "budget":
+        return bool(engines & {"google_flights", "google_hotels", "google_shopping"}) or "$" in plan_blob(plan)
+    if role == "market":
+        return "google_shopping" in engines or any("for sale" in (c.get("query") or "").lower() for c in calls)
+    if role in {"shopping", "comparison"}:
+        return "google_shopping" in engines or bool(plan.get("options"))
+    if role == "showtimes":
+        return bool(engines & {"google", "google_maps"})
+    if role == "places":
+        return bool(engines & {"google_hotels", "google_maps"})
+    return True
+
+
+def choose_outputs(plan):
+    """Pick searches and files, then drop anything this plan cannot fill. Empty means the build fails.
+
+    With Muse off, the local chooser in heuristic_outputs decides. See docs/RESTORE_MUSE.md.
+    """
+    raw = muse.select_outputs(plan) if builds_use_muse() else heuristic_outputs(plan)
+    calls = []
+    for c in raw.get("calls") or []:
+        engine, query = c.get("engine"), (c.get("query") or "").strip()
+        if engine not in ENGINES or not query:
+            continue
+        params = {str(k): str(v) for k, v in (c.get("params") or {}).items() if v is not None}
+        calls.append({"id": str(uuid.uuid4()), "engine": engine, "query": query, "params": params})
+    files = []
+    for f in raw.get("files") or []:
+        role = f.get("role")
+        if role not in ROLES or not _keep_role(role, calls, plan):
+            continue
+        kind, default = ROLES[role]
+        files.append({"id": str(uuid.uuid4()), "name": (f.get("name") or default)[:80], "kind": kind, "role": role})
+    if not calls:
+        calls.append({"id": str(uuid.uuid4()), "engine": "google", "query": plan_name(plan), "params": {}})
+        files = [f for f in files if _keep_role(f["role"], calls, plan)]
+    if not files:
+        raise ValueError("Muse did not choose any files this plan can fill")
+    return {"calls": calls, "files": files}
+
+
+def prepare(plan):
+    plan = dict(plan)
+    plan["folderName"] = plan_name(plan)
+    if plan.get("calls") and plan.get("files"):
+        return plan
+    chosen = choose_outputs(plan)
+    plan["calls"], plan["files"] = chosen["calls"], chosen["files"]
+    return plan
+
+
 def write(file, research):
     """(content, summary, sources) for one file: researched if we know it, else what the app sent."""
-    writer = WRITERS.get(file["name"].lower())
+    writer = ROLE_WRITERS.get(file.get("role")) or WRITERS.get(file["name"].lower())
     if writer:
         return writer(research)
     content = file.get("content") or {"blocks": [{"type": "title", "text": file["name"]}]}
@@ -487,6 +802,10 @@ def write(file, research):
 def run(b, plan, make_drive, pace=None, on_done=None):
     drive, folder = None, None
     try:
+        plan = prepare(plan)
+        b.emit("planned", folderName=plan["folderName"],
+               calls=[{"id": c["id"], "engine": c["engine"], "query": c["query"]} for c in plan["calls"]],
+               files=[{"id": f["id"], "name": f["name"], "kind": f["kind"]} for f in plan["files"]])
         drive = make_drive()
         pace = PACE if pace is None and getattr(drive, "mock", False) else (pace or 0)
         results, calls = {}, []

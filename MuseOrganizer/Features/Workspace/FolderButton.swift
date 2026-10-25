@@ -2,10 +2,8 @@ import SwiftUI
 
 /// One small button at the top of a plan: builds the Google Drive folder, then opens it.
 struct FolderButton: View {
-    @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
 
-    @State private var showConnect = false
     @State private var showBuild = false
     @State private var showFolder = false
 
@@ -13,24 +11,15 @@ struct FolderButton: View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             if plan.workspace != nil { showFolder = true }
-            else if model.googleAccount == nil { showConnect = true }
             else { showBuild = true }
         } label: {
-            // Icon only: sits in the nav bar, one tap away from anywhere on the plan.
             Image(systemName: plan.workspace == nil ? "folder.badge.plus" : "folder.fill")
                 .foregroundStyle(Tint.stays.strong)
         }
-        .accessibilityLabel(plan.workspace == nil ? "Build a Google Drive folder for this plan" : "Open the \(plan.workspace!.folderName) folder")
-        .sheet(isPresented: $showConnect) {
-            ConnectGoogleSheet {
-                model.googleAccount = "Devin T"
-                showConnect = false
-                Task { try? await Task.sleep(for: .milliseconds(400)); showBuild = true }
-            }
-            .presentationDetents([.medium])
-        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel(plan.workspace == nil ? "Build a folder for this plan" : "Open the \(plan.workspace!.folderName) folder")
         .sheet(isPresented: $showBuild) {
-            BuildFolderSheet(plan: plan, blueprint: Mock.blueprint(for: plan)) {
+            BuildFolderSheet(plan: plan) {
                 showBuild = false
                 Task { try? await Task.sleep(for: .milliseconds(400)); showFolder = true }
             }

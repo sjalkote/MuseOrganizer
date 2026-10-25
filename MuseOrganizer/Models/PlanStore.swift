@@ -59,6 +59,24 @@ final class Plan: Identifiable {
         decisions.first { $0.title == category.rawValue }
     }
 
+    /// Add places or prices a chat search just found, without clearing options already on the plan.
+    func addFound(_ live: [HuddleAPI.Board.Option]) {
+        let known = Set(options.map(\.title))
+        for o in live where !known.contains(o.title) {
+            let category: OptionCategory = switch o.category {
+            case "flights": .flights
+            case "stays": .stays
+            default: .activities
+            }
+            options.append(BoardOption(
+                category: category, title: o.title, detail: o.detail,
+                price: o.price.map(Money.format) ?? (o.priceLabel ?? ""), unit: o.unit, tradeoff: o.tradeoff,
+                source: o.source, fetched: "just now", upVotes: 0, downVotes: 0,
+                watchID: o.watchId, link: o.link.flatMap(URL.init(string:))
+            ))
+        }
+    }
+
     /// Swap in live options from the backend. Links people shared stay; votes start fresh on new options.
     func replaceOptions(with live: [HuddleAPI.Board.Option]) {
         let shared = options.filter { $0.sharedBy != nil }
@@ -114,26 +132,42 @@ final class Plan: Identifiable {
     /// Muse answers from the plan's live searches and price watches. Without a backend, a scripted demo reply.
     private func runPlanner(for prompt: String) async {
         if let api = HuddleAPI.configured {
-            withAnimation(Motion.smooth) { plannerStatus = "Muse is reading the plan…" }
+            withAnimation(Motion.smooth) { plannerStatus = "Searching…" }
             let started = Date.now
             let text: String
             do {
-                text = try await api.ask(planID: id, question: prompt).text
+                let kindName: String = switch kind {
+                case .trip: "trip"
+                case .decision: "decision"
+                case .gathering: "gathering"
+                case .general: "general"
+                }
+                let answer = try await api.ask(planID: id, question: prompt, name: name, kind: kindName)
+                text = answer.text
+                if !answer.options.isEmpty {
+                    addFound(answer.options)
+                    planUpdated = true
+                }
             } catch {
-                text = "I couldn't reach Muse just now (\(error.localizedDescription)). Try again in a minute."
+                text = "I couldn't reach the search just now (\(error.localizedDescription)). Try again in a minute."
             }
             let seconds = Date.now.timeIntervalSince(started)
             withAnimation(Motion.smooth) {
                 plannerStatus = nil
-                steps.append(AgentStep(tool: "Answer in the thread", detail: prompt, engine: "Muse Spark", duration: seconds, credits: 1))
+                steps.append(AgentStep(tool: "Answer in the thread", detail: prompt, engine: "SerpApi", duration: seconds, credits: 1))
                 messages.append(Message(senderID: "planner", body: .planner(PlannerPost(
-                    text: text, trace: ["Muse Spark · \(seconds.formatted(.number.precision(.fractionLength(1))))s", "Live prices"]
+                    text: text, trace: ["SerpApi · \(seconds.formatted(.number.precision(.fractionLength(1))))s", "Live search"]
                 )), time: Self.now()))
             }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }
-        let script = kind == .decision ? carScript() : tripScript(prompt)
+        let script: Script
+        switch kind {
+        case .trip: script = tripScript(prompt)
+        case .decision: script = carScript()
+        case .gathering, .general: script = generalScript()
+        }
         try? await Task.sleep(for: .milliseconds(400))
         for step in script.steps {
             withAnimation(Motion.smooth) { plannerStatus = step.status }
@@ -189,6 +223,16 @@ final class Plan: Identifiable {
         )
     }
 
+    private func generalScript() -> Script {
+        Script(
+            steps: [
+                Step(status: "Reading the thread…", record: AgentStep(tool: "Read the thread", detail: name, engine: "Muse Spark", duration: 0.4, credits: 1)),
+            ],
+            post: PlannerPost(text: "I'll put prices in a Sheet and the plan itself in a Doc."),
+            option: nil
+        )
+    }
+
     private func carScript() -> Script {
         Script(
             steps: [
@@ -225,12 +269,13 @@ final class AppModel {
              messages: Mock.dinnerMessages, options: Mock.dinnerOptions,
              steps: Mock.dinnerSteps, sources: [], unread: 3,
              request: "@Muse where should we go for Bea's birthday dinner Friday? 6 of us, $40 each, one vegan, near Allston"),
+        Plan(id: "movie", name: "Friday movie night", kind: .general, source: .imessage, chatName: "Friday crew",
+             members: [Mock.me, Mock.maya], decisions: Mock.movieDecisions, nextStep: "Pick a theater",
+             messages: Mock.movieMessages, steps: [], sources: [], unread: 0),
     ]
 
     enum AppTab: Hashable { case home, plans, messages }
 
-    /// Google account used for plan folders (simulated sign-in for now).
-    var googleAccount: String?
     var workspaceService: WorkspaceService = WorkspaceServices.makeDefault()
     /// Muse's price watch across every plan.
     let priceWatch = PriceWatchCenter()
@@ -242,7 +287,7 @@ final class AppModel {
         plan.workspace = ws
         plan.messages.append(Message(senderID: "planner", body: .planner(PlannerPost(
             text: "The \(ws.folderName) folder is ready: budget, itinerary, and everything we researched.",
-            card: .init(title: "Google Drive · \(ws.files.count) files", rows: ws.files.prefix(3).map {
+            card: .init(title: "Plan folder · \(ws.files.count) files", rows: ws.files.prefix(3).map {
                 .init(label: $0.name, detail: $0.kind.label, value: "")
             }, action: "Open folder"),
             trace: ["Shared by link · anyone in \(plan.chatName) can view"]
@@ -263,6 +308,20 @@ final class AppModel {
     init() {
         reloadShared()
         publishSnapshots()
+    }
+
+    func addPlan(name: String, source: ChatSource, chat: String) {
+        let plan = Plan(
+            id: UUID().uuidString, name: name, kind: .general, source: source, chatName: chat,
+            members: [Mock.me],
+            decisions: [Decision(title: "Plan", symbol: "sparkles", tint: .activities, state: .open(name))],
+            nextStep: "Build a plan folder when you're ready",
+            messages: [Message(senderID: Mock.me.id, body: .text(name), time: Plan.now())],
+            steps: [], sources: [], unread: 0
+        )
+        plans.insert(plan, at: 0)
+        publishSnapshots()
+        open(planID: plan.id)
     }
 
     func plan(_ id: String) -> Plan? { plans.first { $0.id == id } }
@@ -326,13 +385,21 @@ final class AppModel {
 
 extension Plan {
     var snapshot: PlanSnapshot {
-        let opts: [PlanSnapshot.Option] = kind == .trip
-            ? options.filter { $0.category == .flights }.map {
+        let opts: [PlanSnapshot.Option]
+        switch kind {
+        case .trip:
+            opts = options.filter { $0.category == .flights }.map {
                 .init(id: $0.id.uuidString, title: $0.title, detail: $0.detail, price: $0.price, category: $0.category.rawValue, votes: $0.upVotes)
-              }
-            : leaseOptions.map {
+            }
+        case .decision:
+            opts = leaseOptions.map {
                 .init(id: $0.id.uuidString, title: $0.title, detail: $0.totalLabel, price: "\($0.monthly)/mo", category: "Options", votes: $0.votes.count)
-              }
+            }
+        case .gathering, .general:
+            opts = options.map {
+                .init(id: $0.id.uuidString, title: $0.title, detail: $0.detail, price: $0.price, category: $0.category.rawValue, votes: $0.upVotes)
+            }
+        }
         return PlanSnapshot(id: id, name: name, chatName: chatName, source: source.rawValue,
                             decided: decidedCount, total: decisions.count, nextStep: nextStep,
                             memberNames: members.map(\.firstName), options: opts)

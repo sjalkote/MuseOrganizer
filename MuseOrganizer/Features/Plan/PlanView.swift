@@ -8,8 +8,8 @@ struct PlanView: View {
 
     var body: some View {
         PlanScreen(plan: plan)
-        .onAppear { plan.planUpdated = false }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onAppear { plan.planUpdated = false }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.canvas)
         .navigationTitle(plan.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -45,41 +45,5 @@ struct PlanView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-    }
-}
-
-/// "3 of 5 decided" summary shared by both plan types.
-struct PlanHeader: View {
-    var plan: Plan
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.s + 2) {
-            HStack(alignment: .center, spacing: Space.s) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(plan.decidedCount) of \(plan.decisions.count)")
-                            .font(.heading)
-                            .figure()
-                            .foregroundStyle(Palette.ink)
-                        Text("decided")
-                            .font(.small)
-                            .foregroundStyle(Palette.inkSecondary)
-                    }
-                    SourceLabel(source: plan.source, chatName: plan.chatName)
-                }
-                Spacer(minLength: Space.s)
-                AvatarStack(members: plan.members, size: 26)
-            }
-            DecisionProgress(decided: plan.decidedCount, total: plan.decisions.count)
-            HStack(spacing: Space.s) {
-                Text("Next")
-                    .font(.smallStrong)
-                    .foregroundStyle(Palette.accent)
-                Text(plan.nextStep)
-                    .font(.small)
-                    .foregroundStyle(Palette.ink)
-            }
-        }
-        .accessibilityElement(children: .contain)
     }
 }

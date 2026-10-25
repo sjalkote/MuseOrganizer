@@ -38,9 +38,9 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showNewPlan) {
-                NewPlanSheet {
+                NewPlanSheet { name, source, chat in
                     showNewPlan = false
-                    model.open(planID: "japan")
+                    model.addPlan(name: name, source: source, chat: chat)
                 }
             }
         }

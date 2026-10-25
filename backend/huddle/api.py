@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from . import board, engine, google, serp, watch, workspace
+from . import board, engine, google, lookup, serp, watch, workspace
 from . import muse as muse_mod
 from .templates import TEMPLATES
 
@@ -272,9 +272,15 @@ class BuildFile(BaseModel):
 
 
 class BuildPlan(BaseModel):
-    folderName: str
-    kind: str = "trip"
+    folderName: str = ""
+    name: str = ""
+    kind: str = ""
     members: list[str] = []
+    decisions: list[dict] = []
+    options: list[dict] = []
+    itinerary: list[dict] = []
+    notes: str = ""
+    messages: list[str] = []
     context: dict[str, str] = {}
     calls: list[BuildCall] = []
     files: list[BuildFile] = []
@@ -284,18 +290,32 @@ class AuthCode(BaseModel):
     serverAuthCode: str
 
 
+def _live_required():
+    """A live folder build calls SerpAPI. Muse is optional until docs/RESTORE_MUSE.md. Pytest sets HUDDLE_OFFLINE=1."""
+    if os.environ.get("HUDDLE_OFFLINE") == "1":
+        return
+    if not os.environ.get("SERPAPI_API_KEY"):
+        raise HTTPException(503, "This build needs live SerpAPI. Missing SERPAPI_API_KEY.")
+
+
 @app.post("/plans/{pid}/workspace", status_code=202)
 def build_workspace(pid: str, body: BuildPlan):
-    """Start building the plan's Drive folder. Without Google credentials it writes to fixtures/drive/ instead."""
-    if google.configured():
-        token = _refresh_token()
-        if not token:
-            raise HTTPException(409, "Google Drive isn't connected yet: open /auth/google/start")
+    """Start building the plan's folder. The local chooser picks files unless Muse is enabled.
+
+    Google Drive is optional. A connected account writes Sheets and Docs; otherwise the
+    same files land locally and the app shows them.
+    """
+    _live_required()
+    token = _refresh_token() if google.configured() else None
+    if token:
         make = lambda: google.Drive(token)
+        mode = "google"
     else:
-        make = workspace.MockDrive
-    b = workspace.start({"planId": pid, **body.model_dump()}, make, on_done=lambda plan, files: _remember_budget(pid, plan, files))
-    return {"buildId": b.id, "mode": "google" if google.configured() else "mock"}
+        make, mode = workspace.MockDrive, "local"
+    snap = body.model_dump()
+    snap["folderName"] = body.folderName or body.name or "Plan"
+    b = workspace.start({"planId": pid, **snap}, make, on_done=lambda plan, files: _remember_budget(pid, plan, files))
+    return {"buildId": b.id, "mode": mode}
 
 
 def _remember_budget(pid, plan, files):
@@ -404,6 +424,8 @@ class NewWatch(BaseModel):
 
 class Question(BaseModel):
     question: str
+    name: str = ""
+    kind: str = ""
 
 
 @app.get("/status")
@@ -462,13 +484,37 @@ def all_alerts(since: float = 0):
     return {"alerts": watch.alerts(since), "now": time.time()}
 
 
+def _watch_summary(watches):
+    return [{k: w[k] for k in ("category", "label", "detail", "unit", "current", "low", "high")} | {"advice": w["advice"]}
+            for w in watches]
+
+
 @app.post("/plans/{pid}/ask")
 def ask(pid: str, body: Question):
-    """The Planner's reply in the thread: Muse answers from the plan's live board and watches."""
-    plan = {"watches": [{k: w[k] for k in ("category", "label", "detail", "unit", "current", "low", "high")} | {"advice": w["advice"]}
-                        for w in watch.for_plan(pid)]}
+    """A chat reply. SerpAPI looks up places and prices. Questions about watches already running stay on those numbers."""
+    existing = watch.for_plan(pid)
+    if lookup.about_existing_watches(body.question, existing):
+        return _answer_from_watches(body.question, existing)
     try:
-        text = muse_mod.muse.answer(body.question, plan)
+        found = lookup.answer(pid, body.question, name=body.name, kind=body.kind)
+    except (httpx.HTTPError, RuntimeError, KeyError) as e:
+        if existing:
+            return _answer_from_watches(body.question, existing)
+        raise HTTPException(502, f"SerpApi search failed: {e}")
+    text = found["text"]
+    if workspace.builds_use_muse():
+        try:
+            polished = muse_mod.muse.answer(body.question, {"search": found["facts"], "watches": _watch_summary(existing)})
+            if polished:
+                text = polished
+        except (httpx.HTTPError, ValueError):
+            pass
+    return {"text": text, "live": found["live"], "options": found["options"]}
+
+
+def _answer_from_watches(question, existing):
+    try:
+        text = muse_mod.muse.answer(question, {"watches": _watch_summary(existing)})
     except httpx.HTTPError as e:
         raise HTTPException(502, f"Muse didn't answer: {e}")
-    return {"text": text, "live": muse_mod.LIVE}
+    return {"text": text, "live": muse_mod.LIVE, "options": []}

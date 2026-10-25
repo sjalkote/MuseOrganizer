@@ -123,6 +123,37 @@ def test_ask_uses_watches():
     client.post("/plans/ask/board", json=TRIP)
     out = client.post("/plans/ask/ask", json={"question": "which flight is cheapest?"}).json()
     assert out["live"] is False and "watching 3 prices" in out["text"] and "per person" in out["text"]
+    assert out["options"] == []
+
+
+def test_ask_finds_places_with_serp():
+    out = client.post("/plans/places/ask", json={
+        "question": "@Muse where should we go for dinner near Allston",
+        "name": "Bea's birthday dinner",
+    }).json()
+    assert out["live"] is False
+    assert "Google Maps" in out["text"] and "(mock)" in out["text"]
+    assert out["options"][0]["source"] == "Google Maps"
+    assert "Main St" in out["options"][0]["detail"]
+
+
+def test_car_lookup_skips_the_bottom_of_a_price_range():
+    from huddle import lookup
+    data = {"organic_results": [
+        {"title": "RAV4 for sale", "snippet": "Prices currently range from $2,800 to $57,279.", "link": "https://example.com"},
+        {"title": "Used RAV4", "snippet": "Low Price: $26,216 Average Price: $31,541", "link": "https://example.com/2"},
+    ]}
+    priced = lookup._keep_typical(lookup._sale_prices(data))
+    assert priced[0][0] == 26216
+
+
+def test_ask_starts_a_price_watch():
+    out = client.post("/plans/track/ask", json={
+        "question": "@Muse track the price", "name": "Used RAV4", "kind": "decision",
+    }).json()
+    assert out["live"] is False and "$27,495" in out["text"] and "watching" in out["text"]
+    watches = client.get("/plans/track/watches").json()["watches"]
+    assert len(watches) == 1 and watches[0]["current"] == 27495
 
 
 def test_status():

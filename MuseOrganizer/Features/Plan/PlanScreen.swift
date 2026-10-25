@@ -29,7 +29,7 @@ struct PlanScreen: View {
         }
         .background(Palette.canvas)
         .refreshable { await model.priceWatch.check(plan.id) }
-        .task { await model.priceWatch.load(plan) }
+        .task(id: plan.messages.count) { await model.priceWatch.load(plan) }
         .onChange(of: plan.tabs) { _, tabs in
             if !tabs.contains(tab) { tab = .overview }
         }

@@ -8,9 +8,12 @@ struct ThreadView: View {
     @FocusState private var focused: Bool
 
     private var suggestions: [String] {
-        plan.kind == .trip
-            ? ["@Muse find a hotel in Kyoto", "@Muse what should we do on Day 3?"]
-            : ["@Muse what if Priya takes the car?"]
+        switch plan.kind {
+        case .trip: ["@Muse find a hotel in Kyoto", "@Muse what should we do on Day 3?"]
+        case .gathering: ["@Muse where should we go?", "@Muse what's a good price?"]
+        case .general: ["@Muse find somewhere nearby", "@Muse what should we look up?"]
+        case .decision: ["@Muse what if Priya takes the car?", "@Muse track the price"]
+        }
     }
 
     var body: some View {

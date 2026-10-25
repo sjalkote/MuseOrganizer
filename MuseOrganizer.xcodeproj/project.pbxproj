@@ -737,7 +737,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				HUDDLE_BACKEND_URL = "";
+				HUDDLE_BACKEND_URL = "http://127.0.0.1:8000";
 				INFOPLIST_FILE = "Config/Huddle-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = NxT;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -766,7 +766,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				HUDDLE_BACKEND_URL = "";
+				HUDDLE_BACKEND_URL = "http://127.0.0.1:8000";
 				INFOPLIST_FILE = "Config/Huddle-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = NxT;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -2,35 +2,38 @@ import SwiftUI
 
 /// Progress events while a plan folder is being built.
 enum BuildEvent {
+    case planned(WorkspaceBlueprint)
     case researching(ResearchCall.ID)
-    case researched(ResearchCall.ID)
+    case researched(ResearchCall.ID, result: String, duration: Double)
     case writing(WorkspaceFile.ID)
-    case wrote(WorkspaceFile.ID)
+    case wrote(WorkspaceFile.ID, summary: String)
     case finished(PlanWorkspace)
 }
 
 /// Builds a Google Drive folder for a plan. `WorkspaceServices.makeDefault()` picks the real
 /// backend when one is configured (see docs/GOOGLE_WORKSPACE_SETUP.md).
 protocol WorkspaceService {
-    func build(_ blueprint: WorkspaceBlueprint) -> AsyncThrowingStream<BuildEvent, Error>
+    func build(_ plan: Plan) -> AsyncThrowingStream<BuildEvent, Error>
 }
 
 /// Demo implementation: replays the blueprint with realistic timing, no network.
 struct SimulatedWorkspaceService: WorkspaceService {
     var speed: Double = 1
 
-    func build(_ blueprint: WorkspaceBlueprint) -> AsyncThrowingStream<BuildEvent, Error> {
-        AsyncThrowingStream { continuation in
+    func build(_ plan: Plan) -> AsyncThrowingStream<BuildEvent, Error> {
+        let blueprint = Mock.blueprint(for: plan)
+        return AsyncThrowingStream { continuation in
             let task = Task {
+                continuation.yield(.planned(blueprint))
                 for call in blueprint.calls {
                     continuation.yield(.researching(call.id))
                     try await Task.sleep(for: .milliseconds(Int(min(call.duration, 1.2) * 550 / speed)))
-                    continuation.yield(.researched(call.id))
+                    continuation.yield(.researched(call.id, result: call.result, duration: call.duration))
                 }
                 for file in blueprint.files {
                     continuation.yield(.writing(file.id))
                     try await Task.sleep(for: .milliseconds(Int(700 / speed)))
-                    continuation.yield(.wrote(file.id))
+                    continuation.yield(.wrote(file.id, summary: file.summary))
                 }
                 let slug = blueprint.folderName.lowercased().replacingOccurrences(of: " ", with: "-")
                 continuation.yield(.finished(PlanWorkspace(
@@ -57,15 +60,16 @@ struct GoogleWorkspaceService: WorkspaceService {
     var baseURL: URL
     var session: URLSession = .shared
 
-    func build(_ blueprint: WorkspaceBlueprint) -> AsyncThrowingStream<BuildEvent, Error> {
+    func build(_ plan: Plan) -> AsyncThrowingStream<BuildEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 var buildID: String?
+                var chosen: WorkspaceBlueprint?
                 do {
-                    var request = URLRequest(url: baseURL.appending(path: "plans/\(blueprint.planID.isEmpty ? "plan" : blueprint.planID)/workspace"))
+                    var request = URLRequest(url: baseURL.appending(path: "plans/\(plan.id)/workspace"))
                     request.httpMethod = "POST"
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    request.httpBody = try JSONEncoder().encode(BuildRequest(blueprint))
+                    request.httpBody = try JSONEncoder().encode(PlanSnapshotBody(plan))
                     let (data, response) = try await session.data(for: request)
                     try Self.check(response, data)
                     let id = try JSONDecoder().decode(Started.self, from: data).buildId
@@ -79,7 +83,7 @@ struct GoogleWorkspaceService: WorkspaceService {
                             name = line.dropFirst(6).trimmingCharacters(in: .whitespaces)
                         } else if line.hasPrefix("data:") {
                             let payload = Data(line.dropFirst(5).utf8)
-                            if let event = try Self.event(name, payload, blueprint) {
+                            if let event = try Self.event(name, payload, chosen: &chosen) {
                                 continuation.yield(event)
                                 if case .finished = event { break }
                             }
@@ -108,20 +112,26 @@ struct GoogleWorkspaceService: WorkspaceService {
         throw WorkspaceError.server(detail ?? "The NxT backend returned \(http.statusCode).")
     }
 
-    private static func event(_ name: String, _ payload: Data, _ blueprint: WorkspaceBlueprint) throws -> BuildEvent? {
+    private static func event(_ name: String, _ payload: Data, chosen: inout WorkspaceBlueprint?) throws -> BuildEvent? {
         let decoder = JSONDecoder()
         switch name {
+        case "planned":
+            let planned = try decoder.decode(Planned.self, from: payload)
+            let blueprint = planned.blueprint()
+            chosen = blueprint
+            return .planned(blueprint)
         case "researching", "researched", "writing", "wrote":
             let step = try decoder.decode(Step.self, from: payload)
             guard let id = UUID(uuidString: step.id) else { return nil }
             switch name {
             case "researching": return .researching(id)
-            case "researched": return .researched(id)
+            case "researched": return .researched(id, result: step.result ?? "", duration: step.duration ?? 0)
             case "writing": return .writing(id)
-            default: return .wrote(id)
+            default: return .wrote(id, summary: step.summary ?? "")
             }
         case "finished":
             let finished = try decoder.decode(Finished.self, from: payload)
+            let blueprint = chosen ?? WorkspaceBlueprint(folderName: finished.folderName, calls: [], files: [])
             return .finished(finished.workspace(from: blueprint))
         case "failed":
             let failed = try decoder.decode(Failed.self, from: payload)
@@ -158,26 +168,83 @@ enum WorkspaceError: LocalizedError {
 
 // MARK: Backend JSON
 
-private struct BuildRequest: Encodable {
-    struct Call: Encodable { var id, engine, query: String }
-    struct File: Encodable { var id, name, kind, summary: String; var sources: [String]; var content: ContentJSON? }
+/// What Muse sees. No file list: the backend chooses the searches and the Sheets and Docs.
+private struct PlanSnapshotBody: Encodable {
+    struct DecisionBody: Encodable { var title, choice: String }
+    struct OptionBody: Encodable { var title, detail, price, category: String }
+    struct SlotBody: Encodable { var time, title, detail: String }
+    struct DayBody: Encodable { var date, city: String; var slots: [SlotBody] }
 
-    var folderName, kind: String
+    var name, kind, notes: String
     var members: [String]
+    var decisions: [DecisionBody]
+    var options: [OptionBody]
+    var itinerary: [DayBody]
+    var messages: [String]
     var context: [String: String]
+
+    init(_ plan: Plan) {
+        name = plan.name
+        switch plan.kind {
+        case .trip: kind = "trip"
+        case .decision: kind = "car"
+        case .gathering, .general: kind = "plan"
+        }
+        notes = plan.nextStep
+        members = plan.members.map(\.name)
+        decisions = plan.decisions.map { d in
+            let choice: String
+            switch d.state {
+            case .decided(let s), .voting(let s), .open(let s): choice = s
+            }
+            return DecisionBody(title: d.title, choice: choice)
+        }
+        options = plan.options.map {
+            OptionBody(title: $0.title, detail: $0.detail, price: $0.price, category: $0.category.rawValue)
+        } + plan.leaseOptions.map {
+            OptionBody(title: $0.title, detail: $0.totalLabel, price: $0.monthly, category: "Options")
+        }
+        itinerary = plan.itinerary.map { day in
+            DayBody(date: day.date, city: day.city, slots: day.slots.map {
+                SlotBody(time: $0.time, title: $0.title, detail: $0.detail)
+            })
+        }
+        messages = plan.messages.suffix(12).map { m in
+            switch m.body {
+            case .text(let t): t
+            case .planner(let p): p.text
+            case .event(let e): e
+            }
+        }
+        context = plan.kind == .decision
+            ? ["buyoutPrice": "24180", "simulated": "1", "vehicle": "2023 Toyota RAV4 XLE", "location": "Austin, TX"]
+            : [:]
+    }
+}
+
+private struct Planned: Decodable {
+    struct Call: Decodable { var id, engine, query: String }
+    struct File: Decodable { var id, name, kind: String }
+    var folderName: String
     var calls: [Call]
     var files: [File]
 
-    init(_ blueprint: WorkspaceBlueprint) {
-        folderName = blueprint.folderName
-        kind = blueprint.context["kind"] ?? "trip"
-        members = blueprint.members
-        context = blueprint.context
-        calls = blueprint.calls.map { Call(id: $0.id.uuidString, engine: $0.engine, query: $0.query) }
-        files = blueprint.files.map {
-            File(id: $0.id.uuidString, name: $0.name, kind: $0.kind.rawValue, summary: $0.summary,
-                 sources: $0.sources, content: ContentJSON($0.content))
-        }
+    func blueprint() -> WorkspaceBlueprint {
+        WorkspaceBlueprint(
+            folderName: folderName,
+            calls: calls.compactMap { c -> ResearchCall? in
+                guard let id = UUID(uuidString: c.id) else { return nil }
+                return ResearchCall(id: id, engine: c.engine, query: c.query, result: "", duration: 0)
+            },
+            files: files.compactMap { f -> WorkspaceFile? in
+                guard let id = UUID(uuidString: f.id) else { return nil }
+                let kind = WorkspaceFileKind(rawValue: f.kind) ?? .doc
+                let content: FileContent = kind == .sheet
+                    ? .sheet(columns: [], rows: [], footer: nil)
+                    : .doc([])
+                return WorkspaceFile(id: id, name: f.name, kind: kind, summary: "", sources: [], content: content)
+            }
+        )
     }
 }
 
@@ -188,24 +255,6 @@ private struct ContentJSON: Codable {
     var rows: [[String]]?
     var footer: String?
     var blocks: [Block]?
-
-    init?(_ content: FileContent) {
-        switch content {
-        case .sheet(let columns, let rows, let footer):
-            self.columns = columns; self.rows = rows; self.footer = footer
-        case .doc(let blocks):
-            self.blocks = blocks.map {
-                switch $0 {
-                case .title(let text): Block(type: "title", text: text)
-                case .heading(let text): Block(type: "heading", text: text)
-                case .paragraph(let text): Block(type: "paragraph", text: text)
-                case .bullet(let text): Block(type: "bullet", text: text)
-                }
-            }
-        case .folder:
-            return nil
-        }
-    }
 
     var fileContent: FileContent? {
         if let columns, let rows { return .sheet(columns: columns, rows: rows, footer: footer) }
@@ -222,7 +271,12 @@ private struct ContentJSON: Codable {
 }
 
 private struct Started: Decodable { var buildId: String }
-private struct Step: Decodable { var id: String }
+private struct Step: Decodable {
+    var id: String
+    var result: String?
+    var duration: Double?
+    var summary: String?
+}
 private struct Failed: Decodable { var message: String }
 private struct ServerError: Decodable { var detail: String }
 
@@ -267,13 +321,17 @@ private struct Finished: Decodable {
 final class BuildSession {
     enum Status: Hashable { case queued, running, done }
 
-    let blueprint: WorkspaceBlueprint
+    var blueprint: WorkspaceBlueprint
+    let plan: Plan
     var callStatus: [ResearchCall.ID: Status] = [:]
     var fileStatus: [WorkspaceFile.ID: Status] = [:]
     var result: PlanWorkspace?
     var error: String?
 
-    init(blueprint: WorkspaceBlueprint) { self.blueprint = blueprint }
+    init(plan: Plan) {
+        self.plan = plan
+        blueprint = WorkspaceBlueprint(folderName: plan.name, calls: [], files: [])
+    }
 
     var totalSteps: Int { blueprint.calls.count + blueprint.files.count }
     var doneSteps: Int {
@@ -284,9 +342,10 @@ final class BuildSession {
 
     var currentLine: String {
         if result != nil { return "Folder ready" }
+        if blueprint.calls.isEmpty && blueprint.files.isEmpty { return "Choosing what this plan needs…" }
         if let id = fileStatus.first(where: { $0.value == .running })?.key,
            let file = blueprint.files.first(where: { $0.id == id }) {
-            return "Muse is writing \(file.name)…"
+            return "Writing \(file.name)…"
         }
         if let id = callStatus.first(where: { $0.value == .running })?.key,
            let call = blueprint.calls.first(where: { $0.id == id }) {
@@ -297,13 +356,24 @@ final class BuildSession {
 
     func run(with service: WorkspaceService) async {
         do {
-            for try await event in service.build(blueprint) {
+            for try await event in service.build(plan) {
                 withAnimation(Motion.snappy) {
                     switch event {
+                    case .planned(let blueprint):
+                        self.blueprint = blueprint
                     case .researching(let id): callStatus[id] = .running
-                    case .researched(let id): callStatus[id] = .done
+                    case .researched(let id, let result, let duration):
+                        callStatus[id] = .done
+                        if let i = blueprint.calls.firstIndex(where: { $0.id == id }) {
+                            if !result.isEmpty { blueprint.calls[i].result = result }
+                            if duration > 0 { blueprint.calls[i].duration = duration }
+                        }
                     case .writing(let id): fileStatus[id] = .running
-                    case .wrote(let id): fileStatus[id] = .done
+                    case .wrote(let id, let summary):
+                        fileStatus[id] = .done
+                        if let i = blueprint.files.firstIndex(where: { $0.id == id }), !summary.isEmpty {
+                            blueprint.files[i].summary = summary
+                        }
                     case .finished(let workspace): result = workspace
                     }
                 }

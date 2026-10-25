@@ -43,7 +43,7 @@ enum ChatSource: String, CaseIterable, Identifiable {
     }
 }
 
-enum PlanKind { case trip, decision, gathering }
+enum PlanKind { case trip, decision, gathering, general }
 
 // MARK: Decisions (the plan's checklist)
 

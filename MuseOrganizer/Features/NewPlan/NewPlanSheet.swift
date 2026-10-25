@@ -3,7 +3,7 @@ import CoreImage.CIFilterBuiltins
 
 /// Start a plan by adding the Planner to a group chat you already have.
 struct NewPlanSheet: View {
-    var onCreate: () -> Void
+    var onCreate: (String, ChatSource, String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = "Japan Trip 2027"
@@ -67,7 +67,7 @@ struct NewPlanSheet: View {
             .safeAreaInset(edge: .bottom) {
                 Button("Add Muse to \(chat.isEmpty ? "chat" : chat)") {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    onCreate()
+                    onCreate(name, source, chat)
                 }
                 .buttonStyle(.primary)
                 .disabled(name.isEmpty || chat.isEmpty)
