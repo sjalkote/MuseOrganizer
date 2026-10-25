@@ -19,7 +19,7 @@ struct MuseWatchCard: View {
                     MuseMark(size: 24)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Muse price watch").font(.smallStrong).foregroundStyle(Palette.ink)
-                        Text(subtitle).font(.caption2).foregroundStyle(center.isDemo ? Palette.caution : Palette.inkSecondary)
+                        Text(subtitle).font(.caption2).foregroundStyle(Palette.inkSecondary)
                     }
                     Spacer(minLength: 0)
                     if center.checking.contains(plan.id) {
@@ -68,8 +68,8 @@ struct MuseWatchCard: View {
 
 extension MuseWatchCard {
     private var subtitle: String {
-        let count = watches.isEmpty ? "" : "\(watches.count) \(watches.count == 1 ? "price" : "prices") · "
-        return count + center.sourceNote
+        // Where the data comes from (live or demo) is spelled out in the sheet, not on the card.
+        watches.isEmpty ? "Finding prices to watch" : "Watching \(watches.count) \(watches.count == 1 ? "price" : "prices")"
     }
 
     private var emptyText: String {

@@ -9,8 +9,8 @@ struct ThreadView: View {
 
     private var suggestions: [String] {
         plan.kind == .trip
-            ? ["@Planner find a hotel in Kyoto", "@Planner what should we do on Day 3?"]
-            : ["@Planner what if Priya takes the car?"]
+            ? ["@Muse find a hotel in Kyoto", "@Muse what should we do on Day 3?"]
+            : ["@Muse what if Priya takes the car?"]
     }
 
     var body: some View {
@@ -103,7 +103,7 @@ struct ThreadView: View {
                     HStack(spacing: Space.s) {
                         ForEach(suggestions, id: \.self) { s in
                             Button { draft = s } label: {
-                                Text(s.replacingOccurrences(of: "@Planner ", with: ""))
+                                Text(s.replacingOccurrences(of: "@Muse ", with: ""))
                                     .font(.small)
                                     .foregroundStyle(Palette.accent)
                                     .padding(.horizontal, Space.m)
@@ -120,7 +120,7 @@ struct ThreadView: View {
 
             HStack(alignment: .bottom, spacing: Space.s) {
                 Button {
-                    if !draft.localizedCaseInsensitiveContains("@planner") { draft = "@Planner " + draft }
+                    if !draft.localizedCaseInsensitiveContains("@muse") { draft = "@Muse " + draft }
                     focused = true
                 } label: {
                     Image(systemName: "at")
@@ -130,7 +130,7 @@ struct ThreadView: View {
                         .background(Palette.fill, in: .circle)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Mention Planner")
+                .accessibilityLabel("Mention Muse")
 
                 HStack(alignment: .bottom, spacing: 0) {
                     TextField("Message \(plan.chatName)", text: $draft, axis: .vertical)
@@ -238,7 +238,7 @@ private struct MessageRow: View {
 
     private func highlighted(_ text: String, mine: Bool) -> AttributedString {
         var a = AttributedString(text)
-        if let r = a.range(of: "@Planner", options: .caseInsensitive) {
+        if let r = a.range(of: "@Muse", options: .caseInsensitive) ?? a.range(of: "@Planner", options: .caseInsensitive) {
             a[r].font = .body.weight(.semibold)
             if !mine { a[r].foregroundColor = Palette.accent }
         }
@@ -299,11 +299,7 @@ struct PlannerPostView: View {
                 .accessibilityElement(children: .combine)
             }
 
-            if !post.trace.isEmpty {
-                Text(post.trace.joined(separator: "  ·  "))
-                    .font(.small)
-                    .foregroundStyle(Palette.inkSecondary)
-            }
+            // How Muse got the answer (searches, timings) lives in "What Muse did", not in the chat.
         }
         .padding(Space.m)
         .background(Palette.accentFill.opacity(0.6), in: .rect(cornerRadius: Radius.l, style: .continuous))

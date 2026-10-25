@@ -54,7 +54,7 @@ struct NewPlanSheet: View {
 
                     invite
 
-                    Label("The Planner only reads this chat, and only replies when someone @mentions it.",
+                    Label("Muse only reads this chat, and only replies when someone @mentions it.",
                           systemImage: "lock")
                         .font(.small)
                         .foregroundStyle(Palette.inkSecondary)
@@ -65,7 +65,7 @@ struct NewPlanSheet: View {
             .scrollDismissesKeyboard(.interactively)
             .background(Palette.background)
             .safeAreaInset(edge: .bottom) {
-                Button("Add Planner to \(chat.isEmpty ? "chat" : chat)") {
+                Button("Add Muse to \(chat.isEmpty ? "chat" : chat)") {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                     onCreate()
                 }

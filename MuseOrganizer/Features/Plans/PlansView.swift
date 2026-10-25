@@ -13,7 +13,7 @@ struct PlansView: View {
                         NavigationLink(value: plan.id) { PlanRow(plan: plan) }
                             .buttonStyle(.pressable)
                     }
-                    Label("Mention @Planner in a linked group chat, or share something into Huddle, to start a plan.",
+                    Label("Mention @Muse in your group chat, or share something into Huddle, to start a plan.",
                           systemImage: "info.circle")
                         .font(.small)
                         .foregroundStyle(Palette.inkSecondary)
@@ -46,8 +46,8 @@ struct PlansView: View {
 private struct PlanRow: View {
     var plan: Plan
 
-    private var tint: Tint { plan.kind == .trip ? .flights : .car }
-    private var symbol: String { plan.kind == .trip ? "airplane" : "car.fill" }
+    private var tint: Tint { plan.kind == .trip ? .flights : plan.kind == .gathering ? .stays : .car }
+    private var symbol: String { plan.kind == .trip ? "airplane" : plan.kind == .gathering ? "fork.knife" : "car.fill" }
 
     var body: some View {
         Panel(padding: 0) {

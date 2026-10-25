@@ -10,7 +10,49 @@ enum Mock {
     static let dad = Member(id: "dad", name: "Dad", photo: "avatar-dad")
     static let priya = Member(id: "priya", name: "Priya", photo: "avatar-priya")
 
+    static let bea = Member(id: "bea", name: "Bea Santos")
+    static let theo = Member(id: "theo", name: "Theo Park")
+    static let ana = Member(id: "ana", name: "Ana Ruiz")
+    static let kai = Member(id: "kai", name: "Kai Morgan")
+    static let lu = Member(id: "lu", name: "Lu Chen")
+
     static let tripMembers = [me, sam, maya, jordan]
+    static let roommates = [me, bea, theo, ana, kai, lu]
+
+    // MARK: Dinner (a gathering: no flights, no stays, just where and who)
+
+    static let dinnerDecisions: [Decision] = [
+        Decision(title: "Day", symbol: "calendar", tint: .dates, state: .decided("Fri, 7:30 PM")),
+        Decision(title: "Place", symbol: "fork.knife", tint: .stays, state: .voting("Olive & Ember leads")),
+        Decision(title: "Who's in", symbol: "person.2", tint: .activities, state: .open("5 of 6 going")),
+    ]
+
+    static let dinnerMessages: [Message] = [
+        Message(senderID: "theo", body: .text("ok bea's bday friday, where are we going"), time: "5:41 PM"),
+        Message(senderID: "ana", body: .text("somewhere with real vegan stuff pls 🌱"), time: "5:42 PM"),
+        Message(senderID: "kai", body: .text("not over like $40 i'm broke"), time: "5:42 PM"),
+        Message(senderID: "devin", body: .text("@Muse where should we go for Bea's birthday dinner Friday? 6 of us, $40 each, one vegan, near Allston"), time: "5:44 PM"),
+        Message(senderID: "planner", body: .planner(PlannerPost(
+            text: "Three spots near Allston fit $40 each and have proper vegan mains. Olive & Ember takes groups of 6 at 7:30.",
+            card: .init(title: "Dinner · Friday", rows: [
+                .init(label: "Olive & Ember", detail: "Mediterranean · vegan menu · 0.4 mi", value: "$34"),
+                .init(label: "Taqueria Luz", detail: "Mexican · vegan tacos · 0.6 mi", value: "$22"),
+                .init(label: "Little Saigon Kitchen", detail: "Vietnamese · tofu pho · 0.3 mi", value: "$26"),
+            ], action: "Vote in Huddle")
+        )), time: "5:44 PM"),
+        Message(senderID: "lu", body: .text("olive & ember!! their mezze is so good"), time: "5:47 PM"),
+    ]
+
+    static let dinnerOptions: [BoardOption] = [
+        BoardOption(category: .activities, title: "Olive & Ember", detail: "Mediterranean · 0.4 mi · takes 6 at 7:30", price: "$34", unit: "per person", tradeoff: "Full vegan menu and a quiet back room. Books up by Thursday.", source: "Google Maps", fetched: "just now", upVotes: 3, downVotes: 0, isTopPick: true),
+        BoardOption(category: .activities, title: "Taqueria Luz", detail: "Mexican · 0.6 mi · walk-in", price: "$22", unit: "per person", tradeoff: "Cheapest and loud in a fun way. No reservations.", source: "Google Maps", fetched: "just now", upVotes: 1, downVotes: 0),
+        BoardOption(category: .activities, title: "Little Saigon Kitchen", detail: "Vietnamese · 0.3 mi · step-free entrance", price: "$26", unit: "per person", tradeoff: "Closest, tofu pho is great. Small tables, might split us up.", source: "Google Maps", fetched: "just now", upVotes: 0, downVotes: 0),
+    ]
+
+    static let dinnerSteps: [AgentStep] = [
+        AgentStep(tool: "Read the chat", detail: "Friday, 6 people, $40 each, one vegan", engine: "Muse Spark", duration: 0.4, credits: 1),
+        AgentStep(tool: "Find restaurants", detail: "Near Allston · vegan options · groups of 6", engine: "SerpApi · google_maps", duration: 1.3, credits: 1),
+    ]
     static let familyMembers = [me, mom, dad, priya]
 
     // MARK: Trip
@@ -24,12 +66,12 @@ enum Mock {
     ]
 
     static let tripMessages: [Message] = [
-        Message(senderID: "planner", body: .event("Planner added to Japan crew · replies only when @mentioned"), time: "6:58 PM"),
+        Message(senderID: "planner", body: .event("Muse added to Japan crew · replies only when @mentioned"), time: "6:58 PM"),
         Message(senderID: "maya", body: .text("Okay Japan is actually happening??"), time: "7:02 PM"),
         Message(senderID: "sam", body: .text("I can only do late March. Mar 20–24 I'm stuck at a conference"), time: "7:03 PM"),
         Message(senderID: "jordan", body: .text("Budget is like $2,500 each?"), time: "7:04 PM"),
         Message(senderID: "maya", body: .text("Same, and I want at least 2 nights in Kyoto"), time: "7:05 PM"),
-        Message(senderID: "devin", body: .text("@Planner can you find flights from Austin?"), time: "7:06 PM"),
+        Message(senderID: "devin", body: .text("@Muse can you find flights from Austin?"), time: "7:06 PM"),
         Message(senderID: "planner", body: .planner(PlannerPost(
             text: "Three round trips fit everyone's dates and the $2,500 budget. I skipped Mar 20–24 for Sam.",
             card: .init(title: "Flights · Austin → Tokyo", rows: [
@@ -113,7 +155,7 @@ enum Mock {
         Message(senderID: "dad", body: .text("Lease is up in 4 months. Do we just buy the RAV4 out?"), time: "8:12 PM"),
         Message(senderID: "mom", body: .text("We're already over on miles though"), time: "8:13 PM"),
         Message(senderID: "priya", body: .text("I'm driving to college next fall, I need something reliable"), time: "8:14 PM"),
-        Message(senderID: "devin", body: .text("@Planner compare our options?"), time: "8:15 PM"),
+        Message(senderID: "devin", body: .text("@Muse compare our options?"), time: "8:15 PM"),
         Message(senderID: "planner", body: .planner(PlannerPost(
             text: "Buying out looks best. Your buyout price is about $3,900 under what similar RAV4s sell for, and it skips roughly $1,140 in mileage fees.",
             card: .init(title: "RAV4 lease · 4 options", rows: [

@@ -19,10 +19,10 @@ struct ContentView: View {
             Tab("Plans", systemImage: "square.stack", value: AppModel.AppTab.plans) {
                 PlansView()
             }
-            Tab("Shared", systemImage: "tray.and.arrow.down", value: AppModel.AppTab.shared) {
-                SharedView()
+            Tab("Messages", systemImage: "bubble.left.and.bubble.right", value: AppModel.AppTab.messages) {
+                MessagesView()
             }
-            .badge(model.pendingShared.count)
+            .badge(model.unreadCount + model.pendingShared.count)
         }
         .onOpenURL { model.handle($0) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in

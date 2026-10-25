@@ -18,7 +18,7 @@ struct HomeView: View {
                         VStack(spacing: Space.s + 4) {
                             UpNextCover(plan: trip) { model.open(planID: trip.id) }
                             if let (plan, watch, advice) = topCall {
-                                MuseCallRow(plan: plan, watch: watch, advice: advice, isDemo: model.priceWatch.isDemo) {
+                                MuseCallRow(plan: plan, watch: watch, advice: advice) {
                                     model.open(planID: plan.id)
                                 }
                             }
@@ -26,7 +26,6 @@ struct HomeView: View {
                     }
                     needsYou
                     startPlan
-                    latest
                 }
                 .padding(.horizontal, Space.m)
                 .padding(.top, Space.s)
@@ -105,7 +104,10 @@ struct HomeView: View {
                 }
                 ActionRow(symbol: "square.and.arrow.down", tint: ChatSource.instagram.tint,
                           title: "\(model.pendingShared.count) links shared with you",
-                          detail: "Maya, Jordan, and Sam · add them to a plan") { model.tab = .shared }
+                          detail: "Maya, Jordan, and Sam · add them to a plan") {
+                    model.messagesShowsShared = true
+                    model.tab = .messages
+                }
             }
         }
     }
@@ -155,41 +157,6 @@ struct HomeView: View {
         .accessibilityLabel("Start a \(title) plan")
     }
 
-    // MARK: Latest from chats
-
-    private var latest: some View {
-        VStack(alignment: .leading, spacing: Space.s + 4) {
-            SectionTitle(title: "From your chats")
-            Panel(padding: 0) {
-                ForEach(Array(model.plans.enumerated()), id: \.element.id) { index, plan in
-                    if let post = plan.messages.last(where: { if case .planner = $0.body { true } else { false } }),
-                       case .planner(let p) = post.body {
-                        Button { model.open(planID: plan.id) } label: {
-                            VStack(alignment: .leading, spacing: Space.s) {
-                                HStack(spacing: Space.s) {
-                                    PlannerLabel()
-                                    Text("in \(plan.chatName)").font(.small).foregroundStyle(Palette.inkSecondary)
-                                    Spacer()
-                                    Text(post.time).font(.small).foregroundStyle(Palette.inkSecondary)
-                                }
-                                Text(p.text)
-                                    .font(.bodyRegular)
-                                    .foregroundStyle(Palette.ink)
-                                    .lineLimit(3)
-                                    .multilineTextAlignment(.leading)
-                                AppPill(source: plan.source)
-                            }
-                            .padding(Space.m)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(.rect)
-                        }
-                        .buttonStyle(.pressable)
-                        if index < model.plans.count - 1 { Hairline(inset: Space.m) }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Up next cover
@@ -253,7 +220,6 @@ private struct MuseCallRow: View {
     var plan: Plan
     var watch: PriceWatch
     var advice: PriceAdvice
-    var isDemo: Bool
     var action: () -> Void
 
     var body: some View {
@@ -265,7 +231,7 @@ private struct MuseCallRow: View {
                         Text(advice.verdict.title)
                             .font(.smallStrong)
                             .foregroundStyle(advice.verdict.color)
-                        Text("· Muse\(isDemo ? " · demo" : "")")
+                        Text("· Muse").lineLimit(1)
                             .font(.small)
                             .foregroundStyle(Palette.inkSecondary)
                     }

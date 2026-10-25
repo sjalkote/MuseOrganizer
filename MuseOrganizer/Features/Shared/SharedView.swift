@@ -4,13 +4,22 @@ import SwiftUI
 /// Sharing is how Instagram works best, so Huddle meets it there instead of trying to read DMs.
 struct SharedView: View {
     @Environment(AppModel.self) private var model
+    /// Inside Messages it shares that screen's navigation instead of bringing its own.
+    var embedded = false
 
     private var pending: [SharedItem] { model.shared.filter { !$0.added } }
     private var added: [SharedItem] { model.shared.filter(\.added) }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        if embedded {
+            inbox
+        } else {
+            NavigationStack { inbox.navigationTitle("Shared") }
+        }
+    }
+
+    private var inbox: some View {
+        ScrollView {
                 VStack(alignment: .leading, spacing: Space.m) {
                     if pending.isEmpty {
                         Panel {
@@ -58,9 +67,7 @@ struct SharedView: View {
                 .padding(.bottom, Space.xxl)
             }
             .background(Palette.canvas)
-            .navigationTitle("Shared")
             .refreshable { model.reloadShared() }
-        }
     }
 }
 

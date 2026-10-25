@@ -1,46 +1,27 @@
 import SwiftUI
 
 struct PlanView: View {
+    @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
-    @State private var tab: Tab = .plan
     @State private var showActivity = false
     @State private var showShare = false
 
-    enum Tab: String, CaseIterable { case plan = "Plan", thread = "Thread" }
-
     var body: some View {
-        VStack(spacing: 0) {
-            Picker("Section", selection: $tab.animation(Motion.smooth)) {
-                Text(plan.planUpdated && tab != .plan ? "Plan  •" : "Plan").tag(Tab.plan)
-                Text(plan.unread > 0 ? "Thread  \(plan.unread)" : "Thread").tag(Tab.thread)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Space.m)
-            .padding(.bottom, Space.s)
-
-            Group {
-                switch tab {
-                case .plan:
-                    Group {
-                        if plan.kind == .trip {
-                            TripPlanView(plan: plan)
-                        } else {
-                            CarPlanView(plan: plan) { withAnimation(Motion.smooth) { tab = .thread } }
-                        }
-                    }
-                    .onAppear { plan.planUpdated = false }
-                case .thread:
-                    ThreadView(plan: plan)
-                        .onAppear { plan.unread = 0 }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        PlanScreen(plan: plan)
+        .onAppear { plan.planUpdated = false }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.canvas)
         .navigationTitle(plan.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                // The group chat lives in Messages now; this jumps straight to it.
+                Button {
+                    model.openThread(planID: plan.id)
+                } label: {
+                    Image(systemName: plan.unread > 0 ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.and.bubble.right")
+                }
+                .accessibilityLabel(plan.unread > 0 ? "Messages, \(plan.unread) new" : "Messages")
                 FolderButton(plan: plan)
                 Menu("More", systemImage: "ellipsis") {
                     Button("Post update to \(plan.chatName)", systemImage: "arrow.up.message") {
@@ -52,7 +33,7 @@ struct PlanView: View {
                             Label("Add to Calendar", systemImage: "calendar.badge.plus")
                         }
                     }
-                    Button("Planner activity", systemImage: "list.bullet.rectangle") { showActivity = true }
+                    Button("What Muse did", systemImage: "list.bullet.rectangle") { showActivity = true }
                 }
             }
         }

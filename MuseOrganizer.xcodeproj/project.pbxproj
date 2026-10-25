@@ -8,13 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		1497F946D0819899FA097381 /* ActivitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */; };
+		1A7B99CF50C6633E92FDBE5B /* PlanScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8563105A0F950AD8BD3183 /* PlanScreen.swift */; };
 		1FFF30404C63C530EADADFA2 /* HuddleShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D48B951487C4A8F4523AD17D /* HuddleShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		23AE019ACBAAA5612C86F687 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
+		30CC30E53EA9B9CE1CD8CE23 /* PlanTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = E616DF43ADAD3B07634FB262 /* PlanTabs.swift */; };
 		30D6D87778C997FEF6104960 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143E90EC06CE7F1624E951BB /* Components.swift */; };
 		396A8EF2FFF3E67539FABA4E /* Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A0D81D7081997147A0B62F /* Workspace.swift */; };
 		432D63FB6F0BCF058D3AF59E /* WorkspaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */; };
 		449D84629E4DBF1A5651C4AF /* MuseWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 869867C9D7A8874580E1817B /* MuseWatch.swift */; };
 		4A0A9D0ADB524B34830EE7D6 /* FolderButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D1F819D6680FF5E8D75945 /* FolderButton.swift */; };
+		54CD091B68767AC9E2D7CF1E /* MessagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5A1B90714CDBF2B12CF77C /* MessagesView.swift */; };
 		5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E7484E60D9C03DD7B18D4E /* PlansView.swift */; };
 		5DB35B658E2199065353B795 /* HuddleAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57078C531C4CAF962A4EE206 /* HuddleAPI.swift */; };
 		64F57F92F1AEC85E6788895B /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379E4D9C420168A138CCD996 /* MockData.swift */; };
@@ -86,6 +89,7 @@
 		1CBB734EF692EA1AB0287755 /* MessagesRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesRootView.swift; sourceTree = "<group>"; };
 		27A60E7C5C290FA4FF45A19C /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		2A0053CAD8678923CF76C0C5 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		2F8563105A0F950AD8BD3183 /* PlanScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanScreen.swift; sourceTree = "<group>"; };
 		3245450D1D959FC4561A433C /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 		379E4D9C420168A138CCD996 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		3E6E6DE1FC060EA9FEBF80D4 /* PriceWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceWatch.swift; sourceTree = "<group>"; };
@@ -104,6 +108,7 @@
 		958A8B86BAA23A6D2816901E /* TripPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlanView.swift; sourceTree = "<group>"; };
 		B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySheet.swift; sourceTree = "<group>"; };
 		BAF67726EA11C95C17C23A5B /* PriceWatchCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceWatchCenter.swift; sourceTree = "<group>"; };
+		BE5A1B90714CDBF2B12CF77C /* MessagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesView.swift; sourceTree = "<group>"; };
 		BEA1A4A66AD5C560925CE8E4 /* MuseOrganizer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MuseOrganizer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6EE26839EA899A5DDD02345 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C70DB825BAC5B7DEAD922194 /* PlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanStore.swift; sourceTree = "<group>"; };
@@ -111,6 +116,7 @@
 		D0A0D81D7081997147A0B62F /* Workspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workspace.swift; sourceTree = "<group>"; };
 		D48B951487C4A8F4523AD17D /* HuddleShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = HuddleShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2D1F819D6680FF5E8D75945 /* FolderButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderButton.swift; sourceTree = "<group>"; };
+		E616DF43ADAD3B07634FB262 /* PlanTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTabs.swift; sourceTree = "<group>"; };
 		ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EF09F1835B3C85D8B9BC8C65 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		F9C8C4C90DE0394012083C0D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -138,6 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */,
+				2F8563105A0F950AD8BD3183 /* PlanScreen.swift */,
 				CCA8FC6E9A17DBEA60BF416C /* PlanView.swift */,
 				958A8B86BAA23A6D2816901E /* TripPlanView.swift */,
 			);
@@ -149,6 +156,7 @@
 			children = (
 				17932AB071BBEBD9A72B7D97 /* Activity */,
 				CEFE14CE9968314AC094BD09 /* Home */,
+				5CB5C72AAD56FA747F45AA9B /* Messages */,
 				6DD5FC9B58CD70EB8004ABC7 /* NewPlan */,
 				3C7DF7FC955E562902878378 /* Plan */,
 				BFD489B25CF37BD7D9E64F2E /* Plans */,
@@ -182,6 +190,14 @@
 				F9C8C4C90DE0394012083C0D /* Theme.swift */,
 			);
 			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		5CB5C72AAD56FA747F45AA9B /* Messages */ = {
+			isa = PBXGroup;
+			children = (
+				BE5A1B90714CDBF2B12CF77C /* MessagesView.swift */,
+			);
+			path = Messages;
 			sourceTree = "<group>";
 		};
 		6BED68BAA7A018AA7A774FC2 /* HuddleMessages */ = {
@@ -297,6 +313,7 @@
 				379E4D9C420168A138CCD996 /* MockData.swift */,
 				27A60E7C5C290FA4FF45A19C /* Models.swift */,
 				C70DB825BAC5B7DEAD922194 /* PlanStore.swift */,
+				E616DF43ADAD3B07634FB262 /* PlanTabs.swift */,
 				3E6E6DE1FC060EA9FEBF80D4 /* PriceWatch.swift */,
 				D0A0D81D7081997147A0B62F /* Workspace.swift */,
 			);
@@ -452,13 +469,16 @@
 				D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */,
 				9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */,
 				5DB35B658E2199065353B795 /* HuddleAPI.swift in Sources */,
+				54CD091B68767AC9E2D7CF1E /* MessagesView.swift in Sources */,
 				64F57F92F1AEC85E6788895B /* MockData.swift in Sources */,
 				E19435ACFF7266CC571962AC /* Models.swift in Sources */,
 				EF9892CE6140DECDF4C97F12 /* MuseOrganizerApp.swift in Sources */,
 				449D84629E4DBF1A5651C4AF /* MuseWatch.swift in Sources */,
 				6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */,
 				9FA569DB8BF2E1536B2D6620 /* PlanCover.swift in Sources */,
+				1A7B99CF50C6633E92FDBE5B /* PlanScreen.swift in Sources */,
 				76A822D88C10CE0DE472B3CC /* PlanStore.swift in Sources */,
+				30CC30E53EA9B9CE1CD8CE23 /* PlanTabs.swift in Sources */,
 				7D1AEA3AAEF158F510E4B21B /* PlanView.swift in Sources */,
 				5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */,
 				899E708FC80C17A32A0AACA1 /* PriceWatch.swift in Sources */,

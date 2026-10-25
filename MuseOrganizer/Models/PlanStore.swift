@@ -24,6 +24,8 @@ final class Plan: Identifiable {
     var tripQuery: TripQuery?
     /// What Muse watches for a decision plan (the car's market price).
     var watchRequest: WatchRequest?
+    /// The message that started it ("@Muse find flights from Austin, 4 of us, $2,500 each"). Muse reads it to pick the plan's tabs.
+    var request: String
 
     // Live planner state
     var plannerStatus: String?        // "Searching Google Hotels…"
@@ -36,12 +38,13 @@ final class Plan: Identifiable {
     init(id: String, name: String, kind: PlanKind, source: ChatSource, chatName: String, members: [Member],
          decisions: [Decision], nextStep: String, messages: [Message], options: [BoardOption] = [],
          itinerary: [ItineraryDay] = [], leaseOptions: [LeaseOption] = [], steps: [AgentStep],
-         sources: [SourceRef], unread: Int, tripQuery: TripQuery? = nil, watchRequest: WatchRequest? = nil) {
+         sources: [SourceRef], unread: Int, tripQuery: TripQuery? = nil, watchRequest: WatchRequest? = nil,
+         request: String = "") {
         self.id = id; self.name = name; self.kind = kind; self.source = source; self.chatName = chatName
         self.members = members; self.decisions = decisions; self.nextStep = nextStep; self.messages = messages
         self.options = options; self.itinerary = itinerary; self.leaseOptions = leaseOptions
         self.steps = steps; self.sources = sources; self.unread = unread
-        self.tripQuery = tripQuery; self.watchRequest = watchRequest
+        self.tripQuery = tripQuery; self.watchRequest = watchRequest; self.request = request
     }
 
     func member(_ id: String) -> Member? { members.first { $0.id == id } }
@@ -76,10 +79,10 @@ final class Plan: Identifiable {
 
     var lastMessagePreview: String {
         guard let m = messages.last else { return "" }
-        let who = m.senderID == "planner" ? "Planner" : (member(m.senderID)?.firstName ?? "")
+        let who = m.senderID == "planner" ? "Muse" : (member(m.senderID)?.firstName ?? "")
         switch m.body {
         case .text(let t): return "\(who): \(t)"
-        case .planner(let p): return "Planner: \(p.text)"
+        case .planner(let p): return "Muse: \(p.text)"
         case .event(let e): return e
         }
     }
@@ -130,7 +133,7 @@ final class Plan: Identifiable {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }
-        let script = kind == .trip ? tripScript(prompt) : carScript()
+        let script = kind == .decision ? carScript() : tripScript(prompt)
         try? await Task.sleep(for: .milliseconds(400))
         for step in script.steps {
             withAnimation(Motion.smooth) { plannerStatus = step.status }
@@ -210,14 +213,21 @@ final class AppModel {
         Plan(id: "japan", name: "Japan Trip 2027", kind: .trip, source: .whatsapp, chatName: "Japan crew",
              members: Mock.tripMembers, decisions: Mock.tripDecisions, nextStep: "Book flights by Friday",
              messages: Mock.tripMessages, options: Mock.tripOptions, itinerary: Mock.itinerary,
-             steps: Mock.tripSteps, sources: Mock.tripSources, unread: 2, tripQuery: Mock.japanQuery),
+             steps: Mock.tripSteps, sources: Mock.tripSources, unread: 2, tripQuery: Mock.japanQuery,
+             request: "@Muse can you find flights from Austin? Mar 26 – Apr 4, 4 of us, $2,500 each"),
         Plan(id: "car", name: "Our next car", kind: .decision, source: .imessage, chatName: "Family",
              members: Mock.familyMembers, decisions: Mock.carDecisions, nextStep: "Book a dealer visit before July",
              messages: Mock.carMessages, leaseOptions: Mock.leaseOptions,
-             steps: Mock.carSteps, sources: Mock.carSources, unread: 1, watchRequest: Mock.carWatch),
+             steps: Mock.carSteps, sources: Mock.carSources, unread: 1, watchRequest: Mock.carWatch,
+             request: "@Muse should we buy out the RAV4 lease or get something new?"),
+        Plan(id: "dinner", name: "Bea's birthday dinner", kind: .gathering, source: .instagram, chatName: "Roomies",
+             members: Mock.roommates, decisions: Mock.dinnerDecisions, nextStep: "Vote on a place by Thursday",
+             messages: Mock.dinnerMessages, options: Mock.dinnerOptions,
+             steps: Mock.dinnerSteps, sources: [], unread: 3,
+             request: "@Muse where should we go for Bea's birthday dinner Friday? 6 of us, $40 each, one vegan, near Allston"),
     ]
 
-    enum AppTab: Hashable { case home, plans, shared }
+    enum AppTab: Hashable { case home, plans, messages }
 
     /// Google account used for plan folders (simulated sign-in for now).
     var googleAccount: String?
@@ -240,6 +250,12 @@ final class AppModel {
     }
     var tab: AppTab = .home
     var plansPath: [String] = []
+    var messagesPath: [String] = []
+    /// Messages shows group chats or, flipped, what people shared in from Instagram and WhatsApp.
+    var messagesShowsShared = false
+
+    /// Unread messages across every group, for the Messages tab badge.
+    var unreadCount: Int { plans.reduce(0) { $0 + $1.unread } }
 
     /// Links and messages shared in from Instagram, WhatsApp, Safari (via the share extension), newest first.
     var shared: [SharedItem] = []
@@ -255,6 +271,13 @@ final class AppModel {
         guard plan(planID) != nil else { return }
         tab = .plans
         plansPath = [planID]
+    }
+
+    /// Jump to a group's conversation in Messages.
+    func openThread(planID: String) {
+        guard plan(planID) != nil else { return }
+        tab = .messages
+        messagesPath = [planID]
     }
 
     func handle(_ url: URL) {
@@ -279,7 +302,7 @@ final class AppModel {
         let option = BoardOption(
             category: category, title: item.title,
             detail: "Shared by \(item.sharedBy) from \(item.source)",
-            price: "—", unit: "Planner will price it", tradeoff: item.note.isEmpty ? "Added from a shared link." : item.note,
+            price: "—", unit: "Muse will price it", tradeoff: item.note.isEmpty ? "Added from a shared link." : item.note,
             source: item.source, fetched: "just now", upVotes: 0, downVotes: 0,
             sharedBy: item.sharedBy, sharedFrom: ChatSource(rawValue: item.source)
         )

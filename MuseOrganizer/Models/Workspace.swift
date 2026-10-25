@@ -85,11 +85,11 @@ struct WorkspaceBlueprint {
 
 extension Mock {
     static func blueprint(for plan: Plan) -> WorkspaceBlueprint {
-        var blueprint = plan.kind == .trip ? tripBlueprint : carBlueprint
+        var blueprint = plan.kind == .decision ? carBlueprint : tripBlueprint
         blueprint.planID = plan.id
         blueprint.members = plan.members.map(\.name)
         blueprint.context["planName"] = plan.name
-        blueprint.context["kind"] = plan.kind == .trip ? "trip" : "decision"
+        blueprint.context["kind"] = plan.kind == .decision ? "decision" : "trip"
         return blueprint
     }
 

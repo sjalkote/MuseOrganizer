@@ -1,145 +1,10 @@
 import SwiftUI
 
-/// The trip, top to bottom: where it stands, what Muse is seeing in prices, then one category of options at a time.
-struct TripPlanView: View {
-    @Environment(AppModel.self) private var model
-    @Bindable var plan: Plan
-    @State private var category: OptionCategory = .flights
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.l) {
-                TripCover(plan: plan)
-                MuseWatchCard(plan: plan)
-
-                VStack(alignment: .leading, spacing: Space.m) {
-                    CategoryPicker(plan: plan, selection: $category)
-                    OptionList(plan: plan, category: category)
-                        .id(category)
-                        .transition(.opacity)
-                }
-
-                Panel(padding: Space.s + 6) {
-                    Itinerary(days: plan.itinerary)
-                }
-            }
-            .padding(.horizontal, Space.m)
-            .padding(.top, Space.s)
-            .padding(.bottom, Space.xxl)
-        }
-        .refreshable { await model.priceWatch.check(plan.id) }
-        .task { await model.priceWatch.load(plan) }
-    }
-}
-
-// MARK: - Cover
-
-/// The trip as an invitation: mood colors, dates and budget, who's going, and how close it is to decided.
-private struct TripCover: View {
-    var plan: Plan
-
-    var body: some View {
-        PlanCover(theme: plan.cover) {
-            VStack(alignment: .leading, spacing: Space.s + 2) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(plan.decided("Dates") ?? "Dates not set")
-                            .font(.title)
-                            .foregroundStyle(.white)
-                        HStack(spacing: 6) {
-                            if let budget = plan.decided("Budget") {
-                                GlassChip { Label(budget, systemImage: "dollarsign.circle") }
-                            }
-                            GlassChip { Label(plan.chatName, systemImage: plan.source.symbol) }
-                        }
-                    }
-                    Spacer(minLength: Space.s)
-                    AvatarStack(members: plan.members, size: 28)
-                }
-                CoverProgress(decided: plan.decidedCount, total: plan.decisions.count)
-                    .padding(.top, Space.s)
-                HStack(spacing: Space.s) {
-                    Text("\(plan.decidedCount) of \(plan.decisions.count) decided")
-                    Spacer(minLength: 0)
-                    Text("Next: \(plan.nextStep)").lineLimit(1)
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.95))
-            }
-            .padding(Space.m + 2)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-// MARK: - Category picker
-
-/// Airbnb-style tabs: a glyph over the name, an underline that slides to the selected one,
-/// and each tab's checklist status underneath so the old decision grid isn't needed.
-private struct CategoryPicker: View {
-    var plan: Plan
-    @Binding var selection: OptionCategory
-    @Namespace private var underline
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(OptionCategory.allCases) { category in
-                    let selected = selection == category
-                    Button {
-                        UISelectionFeedbackGenerator().selectionChanged()
-                        withAnimation(Motion.snappy) { selection = category }
-                    } label: {
-                        VStack(spacing: 5) {
-                            Image(systemName: category.symbol)
-                                .font(.system(size: 22, weight: .medium))
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(selected ? category.tint.strong : Palette.inkSecondary)
-                                .symbolEffect(.bounce, value: selected)
-                                .frame(height: 26)
-                            Text(shortName(category))
-                                .font(.smallStrong)
-                                .foregroundStyle(selected ? Palette.ink : Palette.inkSecondary)
-                            status(category)
-                            ZStack {
-                                Capsule().fill(.clear).frame(height: 2.5)
-                                if selected {
-                                    Capsule().fill(Palette.ink).frame(width: 36, height: 2.5)
-                                        .matchedGeometryEffect(id: "underline", in: underline)
-                                }
-                            }
-                            .padding(.top, 4)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                }
-            }
-            Hairline()
-        }
-    }
-
-    private func shortName(_ c: OptionCategory) -> String { c == .activities ? "To do" : c.rawValue }
-
-    @ViewBuilder private func status(_ category: OptionCategory) -> some View {
-        switch plan.decision(for: category)?.state {
-        case .decided:
-            Label("Decided", systemImage: "checkmark")
-                .font(.caption2.weight(.semibold)).foregroundStyle(Palette.positive)
-        case .voting:
-            Label("Voting", systemImage: "circle.fill")
-                .font(.caption2.weight(.semibold)).imageScale(.small).foregroundStyle(Palette.accent)
-        default:
-            Text("Open").font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary)
-        }
-    }
-}
+// Pieces of a trip's tabs: the option list each tab shows, and the day-by-day itinerary.
 
 // MARK: - Options
 
-private struct OptionList: View {
+struct OptionList: View {
     @Environment(AppModel.self) private var model
     var plan: Plan
     var category: OptionCategory
@@ -254,7 +119,7 @@ private struct OptionRow: View {
 
 // MARK: - Itinerary (collapsed by default, each day expands on tap)
 
-private struct Itinerary: View {
+struct Itinerary: View {
     var days: [ItineraryDay]
     @State private var expanded = false
     @State private var openDays: Set<ItineraryDay.ID> = []

@@ -223,6 +223,8 @@ struct AppPill: View {
     var body: some View {
         Label(source.rawValue, systemImage: source.symbol)
             .font(.smallStrong)
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(source.tint.strong)
             .padding(.horizontal, Space.s + 2)
             .padding(.vertical, Space.xs)

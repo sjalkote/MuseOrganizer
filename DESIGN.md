@@ -2,11 +2,22 @@
 
 Huddle is the decision layer for group chats you already have. It does **not** replace WhatsApp, iMessage, or Instagram. The chat stays messy and fun (that's the point of a friend chat). Huddle keeps the clean, shared Plan that everyone votes on.
 
-## Structure (bottom tab bar)
-- **Home**: greeting, "Up next" hero (countdown + progress), **Needs you** (to-dos across plans), **Start a plan** templates, latest Planner replies from your chats.
-- **Plans**: one card per plan, each linked to a chat. Inside: **Plan** and **Thread** (mirror of the real chat). The trip Plan reads top to bottom: summary (dates, budget, progress) → **Muse price watch** card → Flights / Stays / To do tabs (each shows decided / voting / open) with one short list at a time → collapsed itinerary. Post update, Add to Calendar and Planner activity live in the "…" menu; the Drive folder is the folder icon beside it.
-- **Shared**: reels, posts, links, and messages people shared into Huddle. One tap adds them to a plan as a votable option.
-- No Apps tab: integrations show up where they do something (Drive in the plan toolbar, Muse on every plan and in Needs you).
+## Structure (bottom tab bar: Home · Plans · Messages)
+- **Home**: greeting, the next plan as a cover, Muse's most important price call, **Needs you**, **Start a plan**.
+- **Plans**: one card per plan. A plan is one screen (`PlanScreen`): compact cover → one-line Muse price strip → **tabs Muse picks from the request** (`PlanTabs.swift`), one at a time, pinned while scrolling. The chat is never a tab; the toolbar's bubble button jumps to it.
+- **Messages** (like Instagram's DMs): every group's chat with unread dots and search; a **Chats | Shared** switch holds what people shared in from Instagram/WhatsApp.
+
+### Tabs adapt to the request (`PlanSetup.infer`, max 5)
+| Request looks like | Tabs |
+| --- | --- |
+| Flight trip | Overview · Flights · Stays · Do · Money |
+| Road trip ("driving") | Overview · Route · Stays · Do · Money |
+| Train / bus | Overview · Getting there · Stays · Do · Money |
+| Dinner | Overview · Places · Who's in |
+| Event (birthday, bachelorette) | Overview · Places · Who's in · Do · Money |
+| Big purchase (car) | Overview · Options · Numbers · Prices |
+Money appears only once there's a budget. Overview is the answer screen: **What's next** with one button to the tab that needs a vote, the budget meter, where things stand, and the chips Muse understood ("6 people", "Vegan option", "Step-free only").
+Based on a market scan (Wanderlog, Troupe, Airbnb, Instagram, Partiful, Polarsteps) and six persona reviews (teen, college, bachelorette planner, busy parent, retired couple, nonbinary international student). No competitor swaps tabs by plan type.
 
 ## How the integrations work
 | App | How Huddle connects | Status |

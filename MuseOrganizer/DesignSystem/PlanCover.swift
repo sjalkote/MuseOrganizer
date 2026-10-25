@@ -12,6 +12,12 @@ struct CoverTheme {
         Color(hex: 0xF7B48E), Color(hex: 0xFFC6A6), Color(hex: 0xF1A3A8),
     ])
 
+    static let candlelight = CoverTheme(colors: [
+        Color(hex: 0x3A1A1F), Color(hex: 0x5A2430), Color(hex: 0x2E1A2C),
+        Color(hex: 0xB4473F), Color(hex: 0xD9774A), Color(hex: 0x8E3A4E),
+        Color(hex: 0xF2B36B), Color(hex: 0xF7CB8A), Color(hex: 0xE59A6E),
+    ])
+
     static let sageRoad = CoverTheme(colors: [
         Color(hex: 0x16302E), Color(hex: 0x23443F), Color(hex: 0x182A33),
         Color(hex: 0x3F6F62), Color(hex: 0x6E9A82), Color(hex: 0x355E62),
@@ -20,7 +26,13 @@ struct CoverTheme {
 }
 
 extension Plan {
-    var cover: CoverTheme { kind == .trip ? .japanDusk : .sageRoad }
+    var cover: CoverTheme {
+        switch kind {
+        case .trip: .japanDusk
+        case .decision: .sageRoad
+        case .gathering: .candlelight
+        }
+    }
 }
 
 struct PlanCover<Content: View>: View {

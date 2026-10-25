@@ -18,7 +18,7 @@ struct ActivitySheet: View {
                 .padding(.bottom, Space.xl)
             }
             .background(Palette.background)
-            .navigationTitle("Planner activity")
+            .navigationTitle("What Muse did")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

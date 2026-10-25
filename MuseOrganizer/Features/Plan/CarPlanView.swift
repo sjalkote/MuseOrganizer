@@ -1,8 +1,10 @@
 import SwiftUI
 
+/// The car decision, one tab at a time: Muse's recommendation on Overview, then the options, the numbers and prices.
 struct CarPlanView: View {
     @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
+    var tab: PlanTab = .overview
     var openThread: () -> Void
 
     @State private var showAssumptions = false
@@ -10,21 +12,13 @@ struct CarPlanView: View {
     private let lease = Mock.lease
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.m) {
-                Panel { PlanHeader(plan: plan) }
-                MuseWatchCard(plan: plan)
-                Panel { snapshot }
-                Panel { options }
-                recommendation
-                threadPreview
-            }
-            .padding(.horizontal, Space.m)
-            .padding(.top, Space.s)
-            .padding(.bottom, Space.xxl)
+        switch tab {
+        case .overview: recommendation
+        case .options: Panel { options }
+        case .numbers: Panel { snapshot }
+        case .prices: MuseWatchCard(plan: plan)
+        default: EmptyView()
         }
-        .refreshable { await model.priceWatch.check(plan.id) }
-        .task { await model.priceWatch.load(plan) }
     }
 
     // MARK: Lease snapshot
@@ -32,13 +26,9 @@ struct CarPlanView: View {
     private var snapshot: some View {
         VStack(alignment: .leading, spacing: Space.m) {
             PanelHeader(title: "Your lease", subtitle: lease.vehicle, symbol: "car.fill", tint: .car) {
-                Text("Simulated")
-                    .font(.smallStrong)
-                    .foregroundStyle(Palette.caution)
-                    .padding(.horizontal, Space.s)
-                    .padding(.vertical, Space.xs)
-                    .background(Tint.stays.soft, in: .capsule)
-                    .accessibilityLabel("Simulated data")
+                Text("Sample numbers")
+                    .font(.caption)
+                    .foregroundStyle(Palette.inkSecondary)
             }
 
             HStack(spacing: Space.s) {
@@ -179,16 +169,10 @@ struct CarPlanView: View {
             }
             .buttonStyle(.primary)
             .padding(.top, Space.s)
-
-            PostToChatButton(plan: plan)
-
-            Button("Talk to an advisor") {}
-                .font(.bodyStrong)
-                .foregroundStyle(Palette.accent)
-                .frame(maxWidth: .infinity, minHeight: 44)
         }
         .padding(Space.l)
-        .background(Palette.accentFill, in: .rect(cornerRadius: Radius.l, style: .continuous))
+        .background(Palette.panel, in: .rect(cornerRadius: Radius.l, style: .continuous))
+        .cardShadow()
     }
 
     // MARK: Thread preview
