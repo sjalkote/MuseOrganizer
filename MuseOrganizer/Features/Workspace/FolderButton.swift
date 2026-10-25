@@ -16,18 +16,10 @@ struct FolderButton: View {
             else if model.googleAccount == nil { showConnect = true }
             else { showBuild = true }
         } label: {
-            Label(plan.workspace?.folderName ?? "Drive folder",
-                  systemImage: plan.workspace == nil ? "folder.badge.plus" : "folder.fill")
-                .font(.smallStrong)
+            // Icon only: sits in the nav bar, one tap away from anywhere on the plan.
+            Image(systemName: plan.workspace == nil ? "folder.badge.plus" : "folder.fill")
                 .foregroundStyle(Tint.stays.strong)
-                .lineLimit(1)
-                .padding(.horizontal, Space.s + 4)
-                .frame(minHeight: 32)
-                .background(Tint.stays.soft, in: .capsule)
-                .frame(minHeight: 44)
-                .contentShape(.rect)
         }
-        .buttonStyle(.pressable)
         .accessibilityLabel(plan.workspace == nil ? "Build a Google Drive folder for this plan" : "Open the \(plan.workspace!.folderName) folder")
         .sheet(isPresented: $showConnect) {
             ConnectGoogleSheet {

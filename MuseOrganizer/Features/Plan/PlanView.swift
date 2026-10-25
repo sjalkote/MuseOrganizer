@@ -39,7 +39,8 @@ struct PlanView: View {
         .navigationTitle(plan.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                FolderButton(plan: plan)
                 Button("Planner activity", systemImage: "list.bullet.rectangle") { showActivity = true }
             }
         }
@@ -56,22 +57,22 @@ struct PlanHeader: View {
     var plan: Plan
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            HStack {
-                SourceLabel(source: plan.source, chatName: plan.chatName)
+        VStack(alignment: .leading, spacing: Space.s + 2) {
+            HStack(alignment: .center, spacing: Space.s) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(plan.decidedCount) of \(plan.decisions.count)")
+                            .font(.heading)
+                            .figure()
+                            .foregroundStyle(Palette.ink)
+                        Text("decided")
+                            .font(.small)
+                            .foregroundStyle(Palette.inkSecondary)
+                    }
+                    SourceLabel(source: plan.source, chatName: plan.chatName)
+                }
                 Spacer(minLength: Space.s)
-                FolderButton(plan: plan)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                Text("\(plan.decidedCount) of \(plan.decisions.count)")
-                    .font(.hero)
-                    .figure()
-                    .foregroundStyle(Palette.ink)
-                Text("decided")
-                    .font(.bodyRegular)
-                    .foregroundStyle(Palette.inkSecondary)
-                Spacer()
-                AvatarStack(members: plan.members, size: 28)
+                AvatarStack(members: plan.members, size: 26)
             }
             DecisionProgress(decided: plan.decidedCount, total: plan.decisions.count)
             HStack(spacing: Space.s) {
@@ -99,7 +100,7 @@ struct DecisionList: View {
             LazyVGrid(columns: columns, spacing: Space.s) {
                 ForEach(decisions) { d in
                     HStack(spacing: Space.s) {
-                        TintTile(symbol: d.symbol, tint: d.tint, size: 28)
+                        TintTile(symbol: d.symbol, tint: d.tint, size: 24)
                         VStack(alignment: .leading, spacing: 0) {
                             HStack(spacing: 4) {
                                 Text(d.title).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
@@ -109,7 +110,8 @@ struct DecisionList: View {
                             Text(value(d)).font(.smallStrong).foregroundStyle(Palette.ink).lineLimit(1)
                         }
                     }
-                    .padding(Space.s)
+                    .padding(.horizontal, Space.s)
+                    .padding(.vertical, 6)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Palette.fill.opacity(0.7), in: .rect(cornerRadius: Radius.s + 2, style: .continuous))
                     .accessibilityElement(children: .combine)
@@ -118,7 +120,7 @@ struct DecisionList: View {
             }
             if let note {
                 Label(note, systemImage: "exclamationmark.triangle")
-                    .font(.small)
+                    .font(.caption)
                     .foregroundStyle(Palette.caution)
             }
         }

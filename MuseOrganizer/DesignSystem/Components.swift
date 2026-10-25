@@ -103,12 +103,14 @@ struct VoteControl: View {
     var up: Int
     var down: Int
     var mine: BoardOption.Vote
+    /// Smaller pill for tight cards; still a 36pt-tall tap area.
+    var compact = false
     var onVote: (BoardOption.Vote) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
             button(.up, count: up, symbol: "hand.thumbsup")
-            Rectangle().fill(Palette.separator).frame(width: 1, height: 20)
+            Rectangle().fill(Palette.separator).frame(width: 1, height: compact ? 14 : 20)
             button(.down, count: down, symbol: "hand.thumbsdown")
         }
         .background(Palette.fill, in: .capsule)
@@ -120,14 +122,15 @@ struct VoteControl: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onVote(vote)
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: compact ? 4 : 6) {
                 Image(systemName: selected ? symbol + ".fill" : symbol)
                     .contentTransition(.symbolEffect(.replace))
                 Text("\(count)").figure().contentTransition(.numericText())
             }
-            .font(.smallStrong)
+            .font(compact ? .caption.weight(.semibold) : .smallStrong)
             .foregroundStyle(selected ? Palette.accent : Palette.inkSecondary)
-            .frame(minWidth: 64, minHeight: 44)
+            .frame(minWidth: compact ? 46 : 64, minHeight: compact ? 32 : 44)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(vote == .up ? "Yes" : "No"), \(count) votes")

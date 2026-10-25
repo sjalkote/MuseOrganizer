@@ -6,16 +6,11 @@ struct TripPlanView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.m) {
-                Panel { PlanHeader(plan: plan) }
-
-                Panel {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Decisions").font(.bodyStrong).foregroundStyle(Palette.ink)
-                        Spacer()
-                        Text("\(plan.decidedCount) of \(plan.decisions.count) settled").font(.small).foregroundStyle(Palette.inkSecondary)
-                    }
-                    .padding(.bottom, Space.s)
+                // Progress and the decisions behind it live in one panel, so the count isn't repeated.
+                Panel(padding: Space.s + 6) {
+                    PlanHeader(plan: plan)
                     DecisionList(decisions: plan.decisions, note: "Sam is away Mar 20–24. These dates avoid it.")
+                        .padding(.top, Space.s + 4)
                 }
 
                 ForEach(OptionCategory.allCases) { category in
@@ -62,16 +57,16 @@ private struct OptionBand: View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
                 Image(systemName: category.symbol)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Palette.onAccent)
-                    .frame(width: 28, height: 28)
-                    .background(category.tint.strong, in: .rect(cornerRadius: 8, style: .continuous))
-                Text(category.rawValue).font(.bodyStrong).foregroundStyle(Palette.ink)
+                    .frame(width: 22, height: 22)
+                    .background(category.tint.strong, in: .rect(cornerRadius: 6, style: .continuous))
+                Text(category.rawValue).font(.smallStrong).foregroundStyle(Palette.ink)
                 Text("\(items.count)").font(.small).foregroundStyle(Palette.inkSecondary)
                 Spacer()
                 Text("via \(items[0].source)").font(.caption).foregroundStyle(Palette.inkSecondary)
             }
-            .padding(.horizontal, Space.m)
+            .padding(.horizontal, Space.s + 6)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
 
@@ -80,11 +75,11 @@ private struct OptionBand: View {
                     ForEach(items) { OptionCard(option: $0, members: members, onVote: onVote) }
                 }
                 .scrollTargetLayout()
-                .padding(.horizontal, Space.m)
+                .padding(.horizontal, Space.s + 6)
             }
             .scrollTargetBehavior(.viewAligned)
         }
-        .padding(.vertical, Space.m)
+        .padding(.vertical, Space.s + 4)
         .background(category.tint.soft, in: .rect(cornerRadius: Radius.l, style: .continuous))
     }
 }
@@ -101,7 +96,7 @@ struct OptionCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: Space.xs) {
                 if option.isTopPick {
                     Image(systemName: "star.fill").font(.caption2).foregroundStyle(Palette.accent)
@@ -116,26 +111,28 @@ struct OptionCard: View {
             Text(option.detail).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(option.price).font(.heading).figure().foregroundStyle(Palette.ink)
-                Text(option.unit).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                Text(option.price).font(.bodyStrong).figure().foregroundStyle(Palette.ink)
+                Text(option.unit).font(.caption2).foregroundStyle(Palette.inkSecondary).lineLimit(1)
             }
+            .padding(.top, 2)
 
             Text(option.tradeoff)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(Palette.inkSecondary)
-                .lineLimit(2, reservesSpace: true)
+                .lineLimit(1)
 
             HStack(spacing: Space.xs) {
-                VoteControl(up: option.upVotes, down: option.downVotes, mine: option.myVote) { onVote(option.id, $0) }
+                VoteControl(up: option.upVotes, down: option.downVotes, mine: option.myVote, compact: true) { onVote(option.id, $0) }
                 Spacer(minLength: 0)
                 if option.myVote != .none, !voters.isEmpty {
-                    AvatarStack(members: voters, size: 20)
+                    AvatarStack(members: voters, size: 18)
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
+            .padding(.top, 4)
         }
-        .padding(Space.s + 4)
-        .frame(width: 216, alignment: .leading)
+        .padding(Space.s + 2)
+        .frame(width: 176, alignment: .leading)
         .background(Palette.panel, in: .rect(cornerRadius: Radius.m, style: .continuous))
         .overlay {
             if option.isTopPick {
