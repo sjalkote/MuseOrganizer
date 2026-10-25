@@ -229,8 +229,11 @@ def test_live_muse_advice_request_and_parse():
     m, sent = fake_muse({"verdict": "book", "headline": "ANA dropped $64", "reason": "Lowest in 60 days."})
     out = m.advise({"item": "ANA", "previous": 1212, "current": 1148, "lowest_seen": 1148})
     assert out == {"verdict": "book", "headline": "ANA dropped $64", "reason": "Lowest in 60 days."}
-    assert sent[0]["tool_choice"]["function"]["name"] == "record_advice"
-    assert "FACTS" in sent[0]["messages"][1]["content"]
+    # The Model API rejects named tool choices with a 400; only "auto" is accepted.
+    assert sent[0]["tool_choice"] == "auto"
+    assert sent[0]["tools"][0]["function"]["name"] == "record_advice"
+    assert any("record_advice" in m["content"] for m in sent[0]["messages"] if m["role"] == "system")
+    assert "FACTS" in sent[0]["messages"][-1]["content"]
 
 
 def test_live_muse_rejects_bad_verdict_and_watch_falls_back(monkeypatch):
@@ -246,3 +249,72 @@ def test_live_muse_rejects_bad_verdict_and_watch_falls_back(monkeypatch):
 def test_live_muse_tradeoffs():
     m, _ = fake_muse({"tradeoffs": [{"id": "flights-0", "text": "Cheapest, one stop"}]})
     assert m.tradeoffs([{"id": "flights-0"}]) == {"flights-0": "Cheapest, one stop"}
+
+
+def scripted_muse(*messages):
+    """A real Muse client whose HTTP calls answer with each message in turn, recording what was sent."""
+    import json as _json
+
+    import httpx
+
+    from huddle.muse import Muse
+
+    sent, replies = [], list(messages)
+
+    def handle(request):
+        sent.append(_json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": replies.pop(0)}]})
+
+    m = Muse("test-key")
+    m.http = httpx.Client(base_url="https://api.meta.ai/v1", transport=httpx.MockTransport(handle))
+    return m, sent
+
+
+def test_live_muse_accepts_json_in_text():
+    m, _ = scripted_muse({"content": 'Sure:\n```json\n{"module": "places", "subject": "ramen Shinjuku"}\n```'})
+    assert m.choose_module({"question": "ramen?"}) == {"module": "places", "subject": "ramen Shinjuku"}
+
+
+def test_live_muse_retries_once_when_no_tool_is_called():
+    import json as _json
+    m, sent = scripted_muse(
+        {"content": "Let me think about that."},
+        {"tool_calls": [{"function": {"name": "choose_module", "arguments": _json.dumps({"module": "web", "subject": "x"})}}]},
+    )
+    assert m.choose_module({"question": "?"})["module"] == "web"
+    assert len(sent) == 2 and "Call choose_module now" in sent[1]["messages"][-1]["content"]
+
+
+def test_live_muse_gives_up_after_two_tries():
+    import pytest
+    m, _ = scripted_muse({"content": "no"}, {"content": "still no"})
+    with pytest.raises(ValueError):
+        m.plan_setup({"name": "x"})
+
+
+def test_muse_may_rephrase_but_not_invent_places():
+    from huddle import lookup
+    q = "@Muse what should we do on day 3 in Kyoto?"
+    assert lookup.grounded_subject("things to do Kyoto", q, "Japan Trip 2027") == "things to do Kyoto"
+    assert lookup.grounded_subject("things to do Osaka", q, "Japan Trip 2027") != "things to do Osaka"
+    assert lookup.grounded_subject("ramen Shinjuku", "@Muse ramen near Shinjuku", "Japan") == "ramen Shinjuku"
+
+
+def test_bare_mention_asks_instead_of_searching():
+    out = client.post("/plans/bare/ask", json={"question": "@Muse", "name": "Japan Trip 2027", "kind": "trip"}).json()
+    assert out["options"] == [] and "What should I look up" in out["text"]
+
+
+def test_good_time_to_book_answers_from_watches():
+    from huddle import lookup
+    assert lookup.about_existing_watches("@Muse is now a good time to book flights?", [{"id": "w"}])
+
+
+def test_live_advice_gets_dollars_and_new_lows_are_book(monkeypatch):
+    m, sent = fake_muse({"verdict": "watch", "headline": "ANA down $64", "reason": "Maybe wait."})
+    monkeypatch.setattr(watch, "muse", m)
+    w = {"label": "ANA", "unit": "per person", "low": 1200, "high": 1300, "neededBy": None, "history": [[0, 1212]]}
+    out = watch.advise(w, 1212, 1148)
+    facts = sent[0]["messages"][-1]["content"]
+    assert '"$1,148"' in facts and '"is_new_low": true' in facts
+    assert out["verdict"] == "book"  # Muse said watch on a new low, so the consistent rule-of-thumb text is used

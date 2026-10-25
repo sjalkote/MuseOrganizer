@@ -4,7 +4,8 @@ import re
 
 from . import serp, watch
 
-_WATCH_QUESTION = ("which", "cheapest", "lowest", "book now", "should we book")
+_WATCH_QUESTION = ("which", "cheapest", "lowest", "book now", "should we book", "good time to book", "time to book",
+                   "worth booking", "should we wait", "wait or book", "book or wait", "price drop", "gone down", "gone up")
 _PLACE = ("where", "destination", "hotel", "stay", "restaurant", "dinner", "food", "near",
           "things to do", "movie", "showtime", "find", "go")
 _PRICE = ("price", "cost", "how much", "track", "watch", "cheap", "fare", "for sale")
@@ -81,9 +82,22 @@ def answer(plan_id, question, name="", kind="", module=None, subject=None):
 
 
 def _grounded(phrase, source):
+    """Muse may rephrase ("things to do Kyoto"), but every name it uses (a capitalized word: a city, a place, a brand)
+    must already be in the chat or the plan, so it can't send the group somewhere nobody mentioned."""
     src = source.lower()
-    words = re.findall(r"[a-z0-9]{4,}", phrase.lower())
-    return all(word in src for word in words)
+    names = [w for w in re.findall(r"\b[A-Z][a-zA-Z]{2,}\b", phrase) if w.lower() not in _COMMON_CAPS]
+    return all(name.lower() in src for name in names)
+
+
+# Words Muse capitalizes that aren't places.
+_COMMON_CAPS = {"things", "restaurants", "restaurant", "places", "best", "top", "cheap", "vegan", "hotels", "hotel",
+                "flights", "movie", "movies", "showtimes", "the", "and", "near", "food", "bars", "brunch", "dinner"}
+
+
+def is_empty(question):
+    """Just an @mention, or nothing to look up."""
+    q = re.sub(r"@\w+", "", question)
+    return not re.search(r"[A-Za-z]{3,}", q)
 
 
 def _subject(question, name):

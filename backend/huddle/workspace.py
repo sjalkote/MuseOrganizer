@@ -157,20 +157,52 @@ def travelers(plan):
     return len(plan.get("members", [])) or 1
 
 
+# Muse sometimes writes a city instead of an airport code ("AUS → Tokyo"). These cover the cities groups ask about most.
+AIRPORTS = {
+    "tokyo": "HND", "osaka": "KIX", "kyoto": "KIX", "seoul": "ICN", "london": "LHR", "paris": "CDG", "rome": "FCO",
+    "barcelona": "BCN", "madrid": "MAD", "lisbon": "LIS", "amsterdam": "AMS", "dublin": "DUB", "mexico city": "MEX",
+    "cancun": "CUN", "cancún": "CUN", "toronto": "YYZ", "montreal": "YUL", "vancouver": "YVR", "honolulu": "HNL",
+    "austin": "AUS", "dallas": "DFW", "houston": "IAH", "chicago": "ORD", "new york": "JFK", "nyc": "JFK",
+    "boston": "BOS", "seattle": "SEA", "phoenix": "PHX", "denver": "DEN", "atlanta": "ATL", "nashville": "BNA",
+    "los angeles": "LAX", "la": "LAX", "san francisco": "SFO", "miami": "MIA", "orlando": "MCO", "las vegas": "LAS",
+    "washington": "IAD", "dc": "IAD", "philadelphia": "PHL", "san diego": "SAN", "portland": "PDX",
+}
+
+
+def airport(name):
+    """'AUS' stays 'AUS'; a known city becomes its main airport; anything else is None."""
+    name = name.strip().strip(".")
+    if re.fullmatch(r"[A-Z]{3}", name):
+        return name
+    return AIRPORTS.get(name.lower())
+
+
+def flight_route(query):
+    m = re.match(r"\s*([A-Za-zÀ-ÿ .]+?)\s*(?:→|->|\bto\b)\s*([A-Za-zÀ-ÿ .]+?)\s*(?:,|$)", query)
+    if not m:
+        return None
+    a, b = airport(m[1]), airport(m[2])
+    return (a, b) if a and b else None
+
+
+class Unsearchable(ValueError):
+    """A search Muse planned that we can't run as written; the build skips it instead of failing."""
+
+
 def search_params(call, plan):
     q, engine, year = call["query"], call["engine"], plan_year(plan)
     if engine == "google_flights":
-        airports = re.match(r"\s*([A-Z]{3})\s*(?:→|->|to)\s*([A-Z]{3})", q)
+        route = flight_route(q)
         dates = date_range(q, year)
-        if not (airports and dates):
-            raise ValueError(f"can't read airports and dates from the flight search {q!r}; send params with it")
-        params = {"departure_id": airports[1], "arrival_id": airports[2], "outbound_date": dates[0].isoformat(),
+        if not (route and dates):
+            raise Unsearchable(f"Skipped the flight search \"{q}\": it needs two airports and dates.")
+        params = {"departure_id": route[0], "arrival_id": route[1], "outbound_date": dates[0].isoformat(),
                   "return_date": dates[1].isoformat(), "adults": _number(r"(\d+)\s*adults?", q, 1),
                   "currency": "USD", "hl": "en"}
     elif engine == "google_hotels":
         dates = date_range(q, year)
         if not dates:
-            raise ValueError(f"can't read dates from the hotel search {q!r}; send params with it")
+            raise Unsearchable(f"Skipped the hotel search \"{q}\": it needs dates.")
         params = {"q": q.split(",")[0].strip() + " hotels", "check_in_date": dates[0].isoformat(),
                   "check_out_date": dates[1].isoformat(), "adults": travelers(plan), "currency": "USD", "hl": "en"}
     else:
@@ -310,6 +342,9 @@ def budget(r):
     for s in r.stays():
         add(f"{s['name']} · {s['nights']} nights", s["rate"] * s["nights"] * s["rooms"], "Google Hotels")
     for call, data in r.of("google"):
+        # A web snippet's "$" is only trustworthy when the search was for a fare or a ticket price.
+        if not re.search(r"\b(fare|ticket|pass|admission|entry|price|cost)s?\b", call["query"], re.I):
+            continue
         price = first_price(data)
         if price:
             label = re.sub(r"\s*\b(fare|price|cost)s?\b", "", call["query"], flags=re.I).strip()
@@ -319,12 +354,20 @@ def budget(r):
     if levels and start:
         days = (end - start).days + 1
         add(f"Food · {days} days (from price levels)", sum(levels) / len(levels) * days * n, "Google Maps")
+    cap = r.plan.get("context", {}).get("budgetPerPerson")
+    if not rows:
+        if not cap:
+            raise ValueError("There are no prices to budget yet.")
+        # Nothing priced in the searches: show what the group said they'd spend, labeled as such.
+        add("Planned spend (from the chat)", float(cap) * n, "Plan")
     total = sum(float(row[2].strip("$").replace(",", "")) for row in rows)
     rows.append(["Total", money(total / n), money(total), ""])
-    cap = r.plan.get("context", {}).get("budgetPerPerson")
     if cap:
         diff = float(cap) - total / n
-        footer = f"{'Under' if diff >= 0 else 'Over'} the {money(float(cap))} budget by {money(abs(diff))} each"
+        if abs(diff) < 0.5:
+            footer = f"Right on the {money(float(cap))} budget"
+        else:
+            footer = f"{'Under' if diff >= 0 else 'Over'} the {money(float(cap))} budget by {money(abs(diff))} each"
     else:
         footer = f"Per person = group total ÷ {n}"
     content = {"columns": ["Item", "Per person", f"Group of {n}", "Source"], "rows": rows, "footer": footer}
@@ -473,27 +516,36 @@ def dealer_prep(r):
 
 def decision_summary(r):
     ctx = r.plan.get("context", {})
+    notes = " ".join(filter(None, [r.plan.get("notes", ""), *r.plan.get("messages", [])]))
     items = listings(r)
     facts = {"listings": len(items)}
     draft = []
+    buyout = ctx.get("buyoutPrice")
+    if not buyout and (m := re.search(r"buy\s*-?out\D{0,20}\$\s?([\d,]+)", notes, re.I)):
+        buyout = m.group(1).replace(",", "")
     if items:
         facts["average_price"] = round(sum(i["price"] for i in items) / len(items))
         draft.append(f"Similar cars sell for about {money(facts['average_price'])} across {len(items)} listings.")
-    if ctx.get("buyoutPrice"):
-        facts["buyout_price"] = float(ctx["buyoutPrice"])
+    if buyout:
+        facts["buyout_price"] = float(buyout)
         if items:
             gap = facts["average_price"] - facts["buyout_price"]
             draft.append(f"The buyout price of {money(facts['buyout_price'])} is about {money(abs(gap))} "
                          f"{'under' if gap >= 0 else 'over'} that.")
+        else:
+            draft.append(f"The buyout price is {money(facts['buyout_price'])}. No similar listings were found to compare it with yet.")
     if ctx.get("votes"):
         facts["votes"] = ctx["votes"]
         draft.append(ctx["votes"])
-    title = f"{r.plan['folderName']}: {ctx['decision']}" if ctx.get("decision") else f"{r.plan['folderName']}: decision"
+    if not draft and notes:
+        facts["notes"] = notes[:600]
+        draft.append(f"What the group said: {notes[:300]}")
+    title = f"{r.plan['folderName']}: {ctx['decision']}" if ctx.get("decision") else r.plan["folderName"]
     blocks = [{"type": "title", "text": title},
               {"type": "paragraph", "text": polish(facts, " ".join(draft) or "Not enough listings to compare yet.")}]
     if ctx.get("buyoutPrice") or ctx.get("simulated"):
         blocks.append({"type": "paragraph", "text": SIMULATED})
-    return {"blocks": blocks}, "Why the group chose it", ["Google Shopping"]
+    return {"blocks": blocks}, "Where the decision stands", ["Google Shopping"] if items else ["Plan"]
 
 
 def comparison(r):
@@ -534,7 +586,9 @@ def showtimes(r):
 
 
 def evening(r):
-    blocks = [{"type": "title", "text": f"{r.plan['folderName']} · Evening"}, {"type": "heading", "text": "The movie"}]
+    movie = any(w in plan_blob(r.plan) for w in ("movie", "film", "showtime", "cinema", "theater", "theatre"))
+    blocks = [{"type": "title", "text": f"{r.plan['folderName']} · Evening"},
+              {"type": "heading", "text": "The movie" if movie else "Where to go"}]
     for _, data in r.of("google"):
         blocks += [{"type": "bullet", "text": f"{item.get('title', '')} · {(item.get('snippet') or '')[:100]}"}
                    for item in data.get("organic_results", [])[:5]]
@@ -813,7 +867,15 @@ def run(b, plan, make_drive, pace=None, on_done=None):
             b.check()
             b.emit("researching", id=call["id"], engine=call["engine"], query=call["query"])
             t = time.monotonic()
-            results[call["id"]] = data = serp.search(call["engine"], **search_params(call, plan))
+            try:
+                params = search_params(call, plan)
+            except Unsearchable as e:
+                results[call["id"]] = {}
+                done = {"id": call["id"], "result": str(e), "duration": 0}
+                calls.append({**done, "engine": call["engine"], "query": call["query"]})
+                b.emit("researched", **done)
+                continue
+            results[call["id"]] = data = serp.search(call["engine"], **params)
             time.sleep(pace)
             done = {"id": call["id"], "result": count_label(call["engine"], data),
                     "duration": round(time.monotonic() - t, 1)}
@@ -826,7 +888,12 @@ def run(b, plan, make_drive, pace=None, on_done=None):
         for f in plan["files"]:
             b.check()
             b.emit("writing", id=f["id"], name=f["name"], kind=f["kind"])
-            content, summary, sources = write(f, research)
+            try:
+                content, summary, sources = write(f, research)
+            except ValueError as e:
+                # One file the searches can't fill shouldn't sink the folder; say so and keep going.
+                b.emit("wrote", id=f["id"], summary=f"Skipped: {e}")
+                continue
             if f["kind"] == "sheet":
                 url = drive.create_sheet(folder, f["name"], content["columns"], content["rows"], content.get("footer"))
             else:
@@ -836,6 +903,8 @@ def run(b, plan, make_drive, pace=None, on_done=None):
                           "sources": sources, "url": url, "content": content})
             b.emit("wrote", id=f["id"], summary=summary)
         b.check()
+        if not files:
+            raise ValueError("Couldn't fill any files for this plan yet. Add dates, places, or a budget in the chat and try again.")
         b.emit("finished", folderName=plan["folderName"], url=drive.share(folder), files=files, calls=calls,
                mock=getattr(drive, "mock", False))
         if on_done:

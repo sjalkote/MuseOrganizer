@@ -31,7 +31,8 @@ ADVISE_SYSTEM = (
     "From FACTS (the item, its price history, the typical range, and how long until it's needed), decide whether "
     "the group should book now, wait, or keep watching, and call record_advice. "
     "headline: under 60 characters, names the item and the change in dollars. "
-    "reason: one or two plain sentences using only numbers from FACTS. Never invent a forecast you can't support."
+    "reason: one or two plain sentences using only numbers from FACTS, written exactly as given (like $1,148). "
+    "If is_new_low is true, the verdict is book. Never invent a forecast you can't support."
 )
 TRADEOFF_SYSTEM = (
     "You are Muse, helping a group compare options. For each option in FACTS, write one short trade-off "
@@ -40,7 +41,8 @@ TRADEOFF_SYSTEM = (
 )
 ANSWER_SYSTEM = (
     "You are Muse, the planner inside a group chat. Answer QUESTION in 1-3 short, friendly sentences using only "
-    "PLAN (live search results and price watches). If PLAN doesn't cover it, say what you'd search for next."
+    "PLAN (live search results and price watches). If PLAN doesn't cover it, say what you'd search for next. "
+    "Never mention the words PLAN, FACTS or QUESTION, and don't call results mock or sample; just use them."
 )
 
 ADVICE_TOOL = {"type": "function", "function": {
@@ -65,8 +67,9 @@ SELECT_SYSTEM = (
     "Call select_outputs once. Engines: google, google_flights, google_hotels, google_maps, google_shopping. "
     "Roles: budget, daily, places, comparison, market, dealer, decision, showtimes, evening, outing, shopping, overview. "
     "Match the plan. A movie night is not a flight search. A hike is not a car lease. A grocery list is one shopping sheet. "
-    "Flight queries must look like 'AUS → HND, Mar 26 – Apr 4, 4 adults'. "
-    "Hotel queries must look like 'Shinjuku, Mar 26 – 30, 2 rooms'. "
+    "Flight queries must use 3-letter airport codes, never city names, like 'AUS → HND, Mar 26 – Apr 4, 4 adults'. "
+    "Hotel queries must look like 'Shinjuku, Mar 26 – 30, 2 rooms'. When a trip visits several places, split the trip's "
+    "dates between them in order (Shinjuku Mar 26 – 30, then Kyoto Mar 30 – Apr 4); never give every hotel the whole trip. "
     "Do not invent prices, dates, or airports that are not in the plan."
 )
 SELECT_TOOL = {"type": "function", "function": {
@@ -111,7 +114,11 @@ MODULE_SYSTEM = (
     "You are Muse, choosing one live search so a group chat can build a module. Call choose_module once. "
     "module is places (where to go, restaurants, things to do, movies), price (track a price, including a car), "
     "flights (only when two airports are named), or web. "
-    "subject is a short search query using only words from FACTS. Do not invent a city, date, airport, or price."
+    "subject is a clean, short search query, the way you'd type it into Google Maps: 'things to do Kyoto', "
+    "'ramen Shinjuku', 'vegan restaurants Allston'. Never paste the sentence itself. "
+    "If the message is vague ('any ideas?'), pick the module that fits the plan: a dinner, outing or trip is places, "
+    "a car or purchase is price. Weather, news and other questions are web. "
+    "Use only place names that appear in FACTS. Do not invent a city, date, airport, or price."
 )
 MODULE_TOOL = {"type": "function", "function": {
     "name": "choose_module",
@@ -136,6 +143,20 @@ def _schema_tool(fields):
     }}
 
 
+def _json_in(text):
+    """The first JSON object in a reply, for when Muse answers in text instead of calling the tool."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    try:
+        return json.loads(text[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+
+
 class Muse:
     def __init__(self, key):
         self.http = httpx.Client(base_url=BASE, headers={"Authorization": f"Bearer {key}"}, timeout=60)
@@ -146,12 +167,11 @@ class Muse:
         return r.json()["choices"][0]["message"]
 
     def extract(self, fields, text):
-        msg = self._chat(
-            [{"role": "system", "content": EXTRACT_SYSTEM}, {"role": "user", "content": text}],
-            tools=[_schema_tool(fields)], tool_choice="auto",
-        )
-        calls = msg.get("tool_calls") or []
-        return json.loads(calls[0]["function"]["arguments"]) if calls else {}
+        try:
+            return self._call_tool(
+                [{"role": "system", "content": EXTRACT_SYSTEM}, {"role": "user", "content": text}], _schema_tool(fields))
+        except ValueError:
+            return {}  # nothing stated is a valid answer here
 
     def explain(self, facts, draft):
         msg = self._chat([
@@ -160,15 +180,34 @@ class Muse:
         ])
         return msg.get("content") or draft
 
+    def _call_tool(self, messages, tool):
+        """Get one tool call out of Muse.
+
+        The Model API only accepts tool_choice "auto" (named or "required" choices are rejected with a 400), so the
+        system prompt says which tool to call, a JSON reply in plain text is accepted too, and one retry nudges Muse
+        if it answered without calling anything.
+        """
+        name = tool["function"]["name"]
+        messages = [*messages[:1], {"role": "system", "content": f"Respond only by calling the {name} tool."}, *messages[1:]]
+        for attempt in range(2):
+            msg = self._chat(messages, tools=[tool], tool_choice="auto")
+            for call in msg.get("tool_calls") or []:
+                fn = call.get("function", {})
+                if fn.get("name") in (name, None):
+                    args = fn.get("arguments") or "{}"
+                    return args if isinstance(args, dict) else json.loads(args)
+            parsed = _json_in(msg.get("content") or "")
+            if isinstance(parsed, dict):
+                return parsed
+            messages = [*messages, {"role": "assistant", "content": msg.get("content") or ""},
+                        {"role": "user", "content": f"Call {name} now with your answer."}]
+        raise ValueError(f"Muse didn't call {name}")
+
     def _tool(self, system, facts, tool):
-        msg = self._chat(
-            [{"role": "system", "content": system}, {"role": "user", "content": f"FACTS:\n{json.dumps(facts)}"}],
-            tools=[tool], tool_choice={"type": "function", "function": {"name": tool["function"]["name"]}},
+        return self._call_tool(
+            [{"role": "system", "content": system}, {"role": "user", "content": f"FACTS:\n{json.dumps(facts, default=str)}"}],
+            tool,
         )
-        calls = msg.get("tool_calls") or []
-        if not calls:
-            raise ValueError("Muse didn't call the tool")
-        return json.loads(calls[0]["function"]["arguments"])
 
     def advise(self, facts):
         out = self._tool(ADVISE_SYSTEM, facts, ADVICE_TOOL)
@@ -200,16 +239,11 @@ class Muse:
 
     def select_outputs(self, plan):
         """Muse picks the SerpAPI searches and Drive files for this plan. Raises if it declines."""
-        msg = self._chat(
+        return self._call_tool(
             [{"role": "system", "content": SELECT_SYSTEM},
              {"role": "user", "content": json.dumps(plan, default=str)[:12000]}],
-            tools=[SELECT_TOOL],
-            tool_choice={"type": "function", "function": {"name": "select_outputs"}},
+            SELECT_TOOL,
         )
-        calls = msg.get("tool_calls") or []
-        if not calls:
-            raise ValueError("Muse did not choose any files")
-        return json.loads(calls[0]["function"]["arguments"])
 
     def transcribe(self, wav: bytes) -> str:
         # WAV only: mono, 16-bit PCM, 16 or 24 kHz, <=10 min.

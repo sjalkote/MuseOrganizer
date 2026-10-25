@@ -110,11 +110,20 @@ def test_car_files_are_marked_simulated_and_unknown_files_pass_through():
     assert files["market"]["content"]["rows"][-1][0] == "Average of 6"
 
 
-def test_failed_build_cleans_up_and_reports():
-    plan = {**TRIP, "folderName": "Broken trip",
+def test_unfillable_file_is_skipped_not_fatal():
+    plan = {**TRIP, "folderName": "Mostly fine trip",
             "files": TRIP["files"] + [{"id": "x", "name": "Market prices", "kind": "sheet"}]}
     events = build(plan)
-    assert events[-1][0] == "failed" and "Google Shopping" in events[-1][1]["message"]
+    assert events[-1][0] == "finished"
+    skipped = [d for k, d in events if k == "wrote" and d["id"] == "x"]
+    assert skipped and skipped[0]["summary"].startswith("Skipped:") and "Google Shopping" in skipped[0]["summary"]
+    assert [f["id"] for f in events[-1][1]["files"]] == ["budget", "daily", "food"]
+
+
+def test_failed_build_cleans_up_and_reports():
+    plan = {**TRIP, "folderName": "Broken trip", "files": [{"id": "x", "name": "Market prices", "kind": "sheet"}]}
+    events = build(plan)
+    assert events[-1][0] == "failed" and "Couldn't fill any files" in events[-1][1]["message"]
     assert not folder("Broken trip").exists()
 
 
@@ -131,10 +140,30 @@ def test_cancel_deletes_what_was_written():
     assert not folder("Cancelled trip").exists()
 
 
-def test_unreadable_flight_query_fails_clearly():
+def test_unreadable_flight_query_is_skipped_clearly():
     plan = {**TRIP, "folderName": "Vague", "calls": [{"id": "c", "engine": "google_flights", "query": "Japan sometime"}]}
     events = build(plan)
-    assert events[-1][0] == "failed" and "send params" in events[-1][1]["message"]
+    researched = [d for k, d in events if k == "researched"]
+    assert researched[0]["result"].startswith("Skipped the flight search") and "airports and dates" in researched[0]["result"]
+    assert events[-1][0] == "finished"
+
+
+def test_city_names_become_airports():
+    assert workspace.flight_route("AUS → Tokyo, Mar 26 – Apr 4, 4 adults") == ("AUS", "HND")
+    assert workspace.flight_route("Boston to Montreal, Oct 16 – 18") == ("BOS", "YUL")
+    assert workspace.flight_route("AUS → Atlantis, Mar 26") is None
+    params = workspace.search_params({"engine": "google_flights", "query": "Austin → Tokyo, Mar 26 – Apr 4, 4 adults"},
+                                     {"folderName": "Japan 2027", "calls": [], "context": {}})
+    assert params["departure_id"] == "AUS" and params["arrival_id"] == "HND" and params["adults"] == 4
+
+
+def test_budget_ignores_web_snippets_that_are_not_fares():
+    r = workspace.Research({"folderName": "Dinner", "members": ["a", "b"], "context": {"budgetPerPerson": "40"},
+                            "calls": [{"id": "g", "engine": "google", "query": "vegan dinner Allston"}]},
+                           {"g": {"organic_results": [{"title": "x", "snippet": "from $95"}]}})
+    content, _, sources = workspace.budget(r)
+    assert content["rows"][0][0] == "Planned spend (from the chat)" and sources == ["Plan"]
+    assert content["footer"] == "Right on the $40 budget"
 
 
 def test_google_needs_sign_in_once_configured(monkeypatch):

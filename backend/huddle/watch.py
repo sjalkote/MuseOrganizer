@@ -25,7 +25,7 @@ MIN_MOVE = float(os.environ.get("HUDDLE_WATCH_MIN_MOVE", "5"))
 
 
 def _db():
-    c = sqlite3.connect(DB)
+    c = sqlite3.connect(DB, timeout=15)  # parallel checks write at the same moment
     c.row_factory = sqlite3.Row
     c.execute("""create table if not exists watches (
         id text primary key, plan_id text not null, category text not null, label text not null,
@@ -169,12 +169,25 @@ def advise(w, old, new, typical=None):
              "recent_prices": [p for _, p in w["history"][-10:]]}
     if typical:
         facts["typical_range"] = typical
+    from .muse import MockMuse
+    rule = MockMuse().advise(facts)
+    if isinstance(muse, MockMuse):
+        return rule
+    new_low = new < old and new <= facts["lowest_seen"] + 0.5
+    # Muse gets dollar amounts written out, so its reasons say "$1,148", not "1148.0".
+    dollars = lambda v: f"${v:,.0f}"
+    shown = {**facts, "previous": dollars(old), "current": dollars(new), "lowest_seen": dollars(facts["lowest_seen"]),
+             "highest_seen": dollars(facts["highest_seen"]), "recent_prices": [dollars(v) for v in facts["recent_prices"]],
+             "change": f"{'down' if new < old else 'up'} {dollars(abs(new - old))}", "is_new_low": new_low}
+    if typical:
+        shown["typical_range"] = [dollars(v) for v in typical]
     try:
-        return muse.advise(facts)
+        out = muse.advise(shown)
     except Exception:
-        # Muse is down or returned something odd: the rule of thumb still gives the group a fair heads-up.
-        from .muse import MockMuse
-        return MockMuse().advise(facts)
+        return rule  # Muse is down or returned something odd: the rule of thumb still gives a fair heads-up
+    if new_low and out["verdict"] != "book":
+        return rule  # a drop to the lowest price seen is always worth acting on; keep the text consistent with that
+    return out
 
 
 def check(wid):
@@ -210,9 +223,13 @@ def check(wid):
 
 
 def check_plan(plan_id):
+    """Re-check every watch on a plan at once. Each move asks Muse (several seconds), so one at a time could run past
+    the app's 60-second timeout on a plan with many watches."""
+    from concurrent.futures import ThreadPoolExecutor
     with _db() as c:
         ids = [r["id"] for r in c.execute("select id from watches where plan_id=?", (plan_id,))]
-    return [a for a in (check(i) for i in ids) if a]
+    with ThreadPoolExecutor(max_workers=min(6, max(1, len(ids)))) as pool:
+        return [a for a in pool.map(check, ids) if a]
 
 
 def check_all():

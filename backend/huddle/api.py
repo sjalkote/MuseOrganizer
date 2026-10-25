@@ -515,6 +515,10 @@ def plan_setup(body: PlanSetupIn):
 def ask(pid: str, body: Question):
     """A chat reply. Muse picks the module, SerpAPI fills it, and Muse writes from those results."""
     existing = watch.for_plan(pid)
+    if lookup.is_empty(body.question):
+        # A bare "@Muse": ask what they need instead of searching for the plan's name.
+        return {"text": "I'm here! What should I look up: flights, places to stay, food, or prices?",
+                "live": muse_mod.LIVE, "options": [], "list": None}
     if lookup.about_existing_watches(body.question, existing):
         return _answer_from_watches(body.question, existing)
     module, subject = None, None
@@ -572,9 +576,12 @@ def _with_list(text, found, body):
         listing = {"id": "places", "title": "Places", "kind": "options"}
     else:
         return text, None
-    names = ", ".join(option.get("title") or "" for option in options[:3] if option.get("title"))
+    titles = [option.get("title") or "" for option in options[:3] if option.get("title")]
+    names = ", ".join(titles)
     count = len(options)
-    lead = f"I added {count} to {listing['title']}" + (f": {names}." if names else ".")
+    # When Muse's reply already names the options, the lead just says where they went, so nothing repeats.
+    named = any(title.lower().removesuffix(" (mock)") in text.lower() for title in titles)
+    lead = f"I added {count} to {listing['title']}" + ("." if named or not names else f": {names}.")
     if "added" not in text.lower():
         text = f"{lead} {text}"
     return text, listing
