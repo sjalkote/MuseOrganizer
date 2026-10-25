@@ -119,6 +119,49 @@ def test_generic_car_watch():
     assert client.get("/plans/car/watches").json()["watches"] == []
 
 
+def _titles(setup):
+    return [tab["title"] for tab in setup["tabs"]]
+
+
+def test_tabs_follow_the_plan():
+    from huddle import tabs
+    movie = tabs.infer("Friday movie night", "general", "")
+    assert movie["style"] == "event" and _titles(movie) == ["Overview", "Theaters"]
+    with_food = tabs.infer("Friday movie night", "general", "", "Find showtimes and somewhere to eat after.")
+    assert _titles(with_food) == ["Overview", "Theaters", "Food"]
+    dinner = tabs.infer("Bea's birthday dinner", "gathering", "where should we go for dinner near Allston, 6 of us, $40 each, one vegan")
+    assert dinner["style"] == "dinner" and _titles(dinner) == ["Overview", "Places", "Who's in"]
+    assert "Vegan option" in dinner["chips"] and "Near Allston" in dinner["chips"]
+    japan = tabs.infer("Japan Trip 2027", "trip", "flights from Austin, 4 of us, $2,500 each")
+    assert _titles(japan) == ["Overview", "Flights", "Stays", "Do", "Money"]
+    car = tabs.infer("Our next car", "decision", "buy out the RAV4 lease")
+    assert car["style"] == "purchase" and "flights" not in [tab["id"] for tab in car["tabs"]]
+
+
+def test_setup_drops_tabs_and_chips_the_plan_never_mentioned():
+    out = client.post("/plans/setup", json={"name": "Friday movie night", "kind": "general", "request": ""}).json()
+    assert out["live"] is False
+    assert _titles(out) == ["Overview", "Theaters"]
+    invented = client.post("/plans/setup", json={"name": "Notes", "kind": "general", "request": "bring a notebook"}).json()
+    # Muse is off in tests, so this is the fallback. A notes plan is not a flight search.
+    assert "flights" not in [tab["id"] for tab in invented["tabs"]]
+
+
+def test_muse_module_choice_is_what_gets_searched(monkeypatch):
+    monkeypatch.setenv("MUSE_ENABLED", "1")
+    monkeypatch.setenv("MODEL_API_KEY", "test")
+    monkeypatch.setattr("huddle.muse.muse.choose_module", lambda facts: {"module": "places", "subject": "dinner near Allston"})
+    monkeypatch.setattr("huddle.muse.muse.answer", lambda question, plan: "Muse: " + plan["search"][0]["title"])
+    out = client.post("/plans/mod/ask", json={
+        "question": "track the price of dinner near Allston",
+        "name": "Bea's birthday dinner",
+        "kind": "gathering",
+    }).json()
+    assert out["options"][0]["source"] == "Google Maps"
+    assert out["text"].startswith("I added") and "Food" in out["text"] and "Muse:" in out["text"]
+    assert out["list"]["title"] == "Food"
+
+
 def test_ask_uses_watches():
     client.post("/plans/ask/board", json=TRIP)
     out = client.post("/plans/ask/ask", json={"question": "which flight is cheapest?"}).json()

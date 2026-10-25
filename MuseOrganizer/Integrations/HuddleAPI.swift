@@ -30,7 +30,16 @@ struct HuddleAPI {
     struct Watches: Decodable { var watches: [PriceWatch]; var alerts: [PriceAdvice] }
     struct Checked: Decodable { var alerts: [PriceAdvice]; var watches: [PriceWatch] }
     struct Alerts: Decodable { var alerts: [PriceAdvice]; var now: Double }
-    struct Answer: Decodable { var text: String; var live: Bool; var options: [Board.Option] }
+    struct MuseTab: Decodable, Hashable { var id, title, kind: String }
+    struct Answer: Decodable { var text: String; var live: Bool; var options: [Board.Option]; var list: MuseTab? }
+    struct PlanShape: Decodable {
+        var style: String
+        var tabs: [MuseTab]
+        var chips: [String]
+        var people: Int?
+        var budget: String?
+        var live: Bool
+    }
     struct Status: Decodable { var muse: Bool; var serpapi: Bool; var watchInterval: Double }
 
     func status() async throws -> Status { try await get("status") }
@@ -38,6 +47,9 @@ struct HuddleAPI {
     func watches(planID: String) async throws -> Watches { try await get("plans/\(planID)/watches") }
     func check(planID: String) async throws -> Checked { try await post("plans/\(planID)/watches/check", Empty()) }
     func alerts(since: Double) async throws -> Alerts { try await get("alerts", query: ["since": String(since)]) }
+    func planSetup(name: String, kind: String, request: String, notes: String) async throws -> PlanShape {
+        try await post("plans/setup", ["name": name, "kind": kind, "request": request, "notes": notes])
+    }
     func ask(planID: String, question: String, name: String, kind: String) async throws -> Answer {
         try await post("plans/\(planID)/ask", ["question": question, "name": name, "kind": kind])
     }

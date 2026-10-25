@@ -5,7 +5,7 @@ import SwiftUI
 struct PlanScreen: View {
     @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
-    @State private var tab: PlanTab = .overview
+    @State private var tabID = "overview"
 
     var body: some View {
         ScrollView {
@@ -16,11 +16,11 @@ struct PlanScreen: View {
                     .padding(.horizontal, Space.m)
                 Section {
                     content
-                        .id(tab)
+                        .id(tabID)
                         .transition(.opacity)
                         .padding(.horizontal, Space.m)
                 } header: {
-                    PlanTabBar(plan: plan, selection: $tab)
+                    PlanTabBar(plan: plan, selection: $tabID)
                         .background(Palette.canvas)
                 }
             }
@@ -30,32 +30,49 @@ struct PlanScreen: View {
         .background(Palette.canvas)
         .refreshable { await model.priceWatch.check(plan.id) }
         .task(id: plan.messages.count) { await model.priceWatch.load(plan) }
-        .onChange(of: plan.tabs) { _, tabs in
-            if !tabs.contains(tab) { tab = .overview }
+        .task(id: plan.name + plan.request) {
+            guard let api = HuddleAPI.configured else { return }
+            let thread = plan.messages.suffix(8).compactMap { message -> String? in
+                if case .text(let text) = message.body { return text }
+                return nil
+            }.joined(separator: ". ")
+            if let shape = try? await api.planSetup(name: plan.name, kind: plan.kindName, request: plan.request, notes: "\(plan.nextStep). \(thread)") {
+                plan.applyMuseSetup(shape)
+            }
+        }
+        .onChange(of: plan.tabs.map(\.id)) { _, ids in
+            if !ids.contains(tabID) { tabID = "overview" }
         }
     }
 
+    private var selected: ShownTab { plan.tabs.first { $0.id == tabID } ?? plan.tabs[0] }
+
     @ViewBuilder private var content: some View {
-        switch tab {
+        switch selected.kind {
         case .overview:
-            PlanOverview(plan: plan) { next in withAnimation(Motion.snappy) { tab = next } }
-        case .flights, .stays, .todo, .places:
-            VStack(alignment: .leading, spacing: Space.m) {
-                if let category = tab.category { OptionList(plan: plan, category: category) }
-                if tab == .todo, plan.kind == .trip, !plan.itinerary.isEmpty {
-                    Panel(padding: Space.s + 6) { Itinerary(days: plan.itinerary) }
-                }
+            if plan.kind == .decision {
+                CarPlanView(plan: plan, tab: .overview) { model.openThread(planID: plan.id) }
+            } else {
+                PlanOverview(plan: plan) { next in withAnimation(Motion.snappy) { tabID = next.id } }
             }
-        case .route, .gettingThere:
-            MuseWorkingCard(text: tab == .route ? "Muse is mapping the drive: legs, stops and gas." : "Muse is checking trains and buses, step-free stations first.") {
+        case .options:
+            OptionList(plan: plan, tab: selected)
+        case .tasks:
+            if plan.kind == .trip, !plan.itinerary.isEmpty {
+                Panel(padding: Space.s + 6) { Itinerary(days: plan.itinerary) }
+            } else {
+                MuseWorkingCard(text: "Muse is turning the chat into a list of what to do.") { model.openThread(planID: plan.id) }
+            }
+        case .route:
+            MuseWorkingCard(text: selected.id == "route" ? "Muse is mapping the drive: legs, stops and gas." : "Muse is checking trains and buses, step-free stations first.") {
                 model.openThread(planID: plan.id)
             }
-        case .guests:
+        case .people:
             GuestList(plan: plan)
         case .money:
             MoneyView(plan: plan)
-        case .options, .numbers, .prices:
-            CarPlanView(plan: plan, tab: tab) { model.openThread(planID: plan.id) }
+        case .decision:
+            CarPlanView(plan: plan, tab: selected.decision ?? .options) { model.openThread(planID: plan.id) }
         }
     }
 }
@@ -144,7 +161,7 @@ private struct MuseStrip: View {
 /// Airbnb-style tabs with a sliding underline. A dot marks tabs waiting on a vote.
 private struct PlanTabBar: View {
     var plan: Plan
-    @Binding var selection: PlanTab
+    @Binding var selection: String
     @Namespace private var underline
 
     var body: some View {
@@ -169,11 +186,11 @@ private struct PlanTabBar: View {
         .padding(.top, Space.xs)
     }
 
-    private func tabButton(_ tab: PlanTab) -> some View {
-        let selected = tab == selection
+    private func tabButton(_ tab: ShownTab) -> some View {
+        let selected = tab.id == selection
         return Button {
             UISelectionFeedbackGenerator().selectionChanged()
-            withAnimation(Motion.snappy) { selection = tab }
+            withAnimation(Motion.snappy) { selection = tab.id }
         } label: {
             VStack(spacing: 5) {
                 Image(systemName: tab.symbol)
@@ -208,8 +225,8 @@ private struct PlanTabBar: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func needsVote(_ tab: PlanTab) -> Bool {
-        if case .voting = plan.decision(for: tab)?.state { true } else { false }
+    private func needsVote(_ tab: ShownTab) -> Bool {
+        if case .voting = plan.decisions.first(where: { $0.title == tab.title })?.state { true } else { false }
     }
 }
 
@@ -219,19 +236,57 @@ private struct PlanTabBar: View {
 private struct PlanOverview: View {
     @Environment(AppModel.self) private var model
     var plan: Plan
-    var select: (PlanTab) -> Void
+    var select: (ShownTab) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            // A decision plan's next step is Muse's recommendation, with its own single action.
-            if plan.kind == .decision {
-                CarPlanView(plan: plan, tab: .overview) { model.openThread(planID: plan.id) }
-            } else {
-                nextStep
-            }
+            found
+            nextStep
             budget
             standing
             understood
+        }
+    }
+
+    /// The rows Muse put on each list, so Overview is the plan and not an empty next step.
+    @ViewBuilder private var found: some View {
+        let lists = plan.tabs.filter { $0.kind == .options }
+        ForEach(lists) { tab in
+            let items = plan.options(for: tab)
+            if !items.isEmpty {
+                Panel(padding: 0) {
+                    HStack(spacing: Space.s) {
+                        MuseMark(size: 18)
+                        Text("Muse added \(items.count) to \(tab.title)")
+                            .font(.smallStrong)
+                            .foregroundStyle(Palette.ink)
+                        Spacer(minLength: Space.s)
+                        Button("See all") { select(tab) }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Palette.accent)
+                    }
+                    .padding([.horizontal, .top], Space.m)
+                    .padding(.bottom, Space.xs)
+                    ForEach(Array(items.prefix(3).enumerated()), id: \.element.id) { index, option in
+                        if index > 0 { Hairline(inset: Space.m) }
+                        Button { select(tab) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(option.title).font(.smallStrong).foregroundStyle(Palette.ink).lineLimit(1)
+                                    Text(option.detail).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                                }
+                                Spacer(minLength: Space.s)
+                                if !option.price.isEmpty {
+                                    Text(option.price).font(.smallStrong).foregroundStyle(Palette.ink)
+                                }
+                            }
+                            .padding(.horizontal, Space.m)
+                            .padding(.vertical, Space.s)
+                        }
+                        .buttonStyle(.pressable)
+                    }
+                }
+            }
         }
     }
 
@@ -244,7 +299,7 @@ private struct PlanOverview: View {
                 .padding(.top, 4)
             if let next = plan.nextTab {
                 Button { select(next) } label: {
-                    Label(next.category == nil ? "Open \(next.title)" : "Vote on \(next.title.lowercased())", systemImage: next.symbol)
+                    Label(plan.options(for: next).isEmpty ? "Ask Muse for \(next.title.lowercased())" : "Open \(next.title)", systemImage: next.symbol)
                 }
                 .buttonStyle(.primary)
                 .padding(.top, Space.m)
@@ -254,9 +309,9 @@ private struct PlanOverview: View {
 
     @ViewBuilder private var budget: some View {
         let lines = plan.costLines { model.priceWatch.watch(id: $0) }
-        if let cap = plan.budgetPerPerson, !lines.isEmpty, plan.tabs.contains(.money) {
+        if let cap = plan.budgetPerPerson, !lines.isEmpty, plan.tabs.contains(where: { $0.kind == .money }) {
             let total = lines.reduce(0) { $0 + $1.perPerson }
-            Button { select(.money) } label: {
+                Button { if let money = plan.tabs.first(where: { $0.kind == .money }) { select(money) } } label: {
                 Panel(padding: Space.m + 2) {
                     HStack(alignment: .firstTextBaseline) {
                         Text("Budget").eyebrowStyle()
@@ -280,16 +335,17 @@ private struct PlanOverview: View {
     }
 
     private var standing: some View {
-        let rows = plan.tabs.filter { $0 != .overview && plan.decision(for: $0) != nil }
-        return Group {
-            if !rows.isEmpty {
+        Group {
+            if !plan.decisions.isEmpty {
                 Panel(padding: 0) {
                     Text("Where things stand").eyebrowStyle()
                         .padding([.horizontal, .top], Space.m)
                         .padding(.bottom, Space.xs)
-                    ForEach(Array(rows.enumerated()), id: \.element) { index, tab in
+                    ForEach(Array(plan.decisions.enumerated()), id: \.element.id) { index, decision in
                         if index > 0 { Hairline(inset: Space.m + 44) }
-                        Button { select(tab) } label: { StandingRow(tab: tab, decision: plan.decision(for: tab)!) }
+                        Button {
+                            if let tab = plan.tabs.first(where: { $0.title == decision.title }) { select(tab) }
+                        } label: { StandingRow(decision: decision) }
                             .buttonStyle(.pressable)
                     }
                 }
@@ -323,14 +379,13 @@ private struct PlanOverview: View {
 }
 
 private struct StandingRow: View {
-    var tab: PlanTab
     var decision: Decision
 
     var body: some View {
         HStack(spacing: Space.m) {
-            TintTile(symbol: tab.symbol, tint: tab.tint, size: 32)
+            TintTile(symbol: decision.symbol, tint: decision.tint, size: 32)
             VStack(alignment: .leading, spacing: 1) {
-                Text(tab.title).font(.smallStrong).foregroundStyle(Palette.ink)
+                Text(decision.title).font(.smallStrong).foregroundStyle(Palette.ink)
                 Text(value).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
             }
             Spacer(minLength: Space.s)

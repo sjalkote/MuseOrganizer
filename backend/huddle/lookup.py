@@ -25,20 +25,49 @@ def about_existing_watches(question, watches):
     return _has(low, _WATCH_QUESTION)
 
 
-def answer(plan_id, question, name="", kind=""):
+def classify(question, name="", kind=""):
+    """Which module should run when Muse is offline: places, price, flights, or web."""
     subject = _subject(question, name)
-    low = f"{subject} {question}".lower()
+    low = f"{subject} {question} {name}".lower()
+    if _has(low, _FLIGHT) and re.search(r"\b([A-Za-z]{3})\s*(?:→|->|to|-)\s*([A-Za-z]{3})\b", question):
+        return "flights", subject
+    if _is_place(low) and not _is_price(low):
+        return "places", subject
+    if _is_price(low) or kind == "decision":
+        return "price", subject
+    return "web", subject
+
+
+def grounded_subject(subject, question, name):
+    """Keep a Muse search query only when every word of it is already in the question or the plan name."""
+    source = f"{question} {name}"
+    if subject and _grounded(subject, source):
+        return subject.strip()
+    return _subject(question, name)
+
+
+def answer(plan_id, question, name="", kind="", module=None, subject=None):
+    subject = subject or _subject(question, name)
+    low = f"{subject} {question} {name}".lower()
     facts = []
     options = []
     watched = None
+    pair = re.search(r"\b([A-Za-z]{3})\s*(?:→|->|to|-)\s*([A-Za-z]{3})\b", question)
 
-    if _has(low, _FLIGHT) and (pair := re.search(r"\b([A-Za-z]{3})\s*(?:→|->|to|-)\s*([A-Za-z]{3})\b", question)):
-        text, facts, options, watched = _flights(plan_id, subject, [pair.group(1).upper(), pair.group(2).upper()], question)
-    elif _is_place(low) and not _is_price(low):
+    if module == "flights" or (module is None and _has(low, _FLIGHT) and pair):
+        module = "flights"
+        if pair:
+            text, facts, options, watched = _flights(plan_id, subject, [pair.group(1).upper(), pair.group(2).upper()], question)
+        else:
+            text, facts, options = _web(subject)
+    elif module == "places" or (module is None and _is_place(low) and not _is_price(low)):
+        module = "places"
         text, facts, options = _places(subject)
-    elif _is_price(low) or kind == "decision":
+    elif module == "price" or (module is None and (_is_price(low) or kind == "decision")):
+        module = "price"
         text, facts, options, watched = _prices(plan_id, subject, low, kind)
     else:
+        module = "web"
         text, facts, options = _web(subject)
 
     return {
@@ -46,8 +75,15 @@ def answer(plan_id, question, name="", kind=""):
         "live": bool(os.environ.get("SERPAPI_API_KEY")),
         "facts": facts,
         "options": options,
+        "module": module,
         "watchId": watched["id"] if watched else None,
     }
+
+
+def _grounded(phrase, source):
+    src = source.lower()
+    words = re.findall(r"[a-z0-9]{4,}", phrase.lower())
+    return all(word in src for word in words)
 
 
 def _subject(question, name):

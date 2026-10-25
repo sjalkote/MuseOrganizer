@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from . import board, engine, google, lookup, serp, watch, workspace
+from . import board, engine, google, lookup, serp, tabs, watch, workspace
 from . import muse as muse_mod
 from .templates import TEMPLATES
 
@@ -428,6 +428,13 @@ class Question(BaseModel):
     kind: str = ""
 
 
+class PlanSetupIn(BaseModel):
+    name: str = ""
+    kind: str = ""
+    request: str = ""
+    notes: str = ""
+
+
 @app.get("/status")
 def status():
     """Which services are live. Anything not live runs on labeled demo data."""
@@ -489,14 +496,37 @@ def _watch_summary(watches):
             for w in watches]
 
 
+@app.post("/plans/setup")
+def plan_setup(body: PlanSetupIn):
+    """The tabs for this plan. Muse chooses them when it is on; the rules are the fallback."""
+    facts = body.model_dump()
+    raw = None
+    if workspace.builds_use_muse():
+        try:
+            raw = muse_mod.muse.plan_setup(facts)
+        except (httpx.HTTPError, ValueError, KeyError):
+            raw = None
+    setup = tabs.finalize(raw, facts)
+    setup["live"] = bool(workspace.builds_use_muse() and muse_mod.LIVE)
+    return setup
+
+
 @app.post("/plans/{pid}/ask")
 def ask(pid: str, body: Question):
-    """A chat reply. SerpAPI looks up places and prices. Questions about watches already running stay on those numbers."""
+    """A chat reply. Muse picks the module, SerpAPI fills it, and Muse writes from those results."""
     existing = watch.for_plan(pid)
     if lookup.about_existing_watches(body.question, existing):
         return _answer_from_watches(body.question, existing)
+    module, subject = None, None
+    if workspace.builds_use_muse():
+        try:
+            choice = muse_mod.muse.choose_module({"question": body.question, "name": body.name, "kind": body.kind})
+            module = choice.get("module")
+            subject = lookup.grounded_subject(choice.get("subject", ""), body.question, body.name)
+        except (httpx.HTTPError, ValueError, KeyError):
+            module, subject = None, None
     try:
-        found = lookup.answer(pid, body.question, name=body.name, kind=body.kind)
+        found = lookup.answer(pid, body.question, name=body.name, kind=body.kind, module=module, subject=subject)
     except (httpx.HTTPError, RuntimeError, KeyError) as e:
         if existing:
             return _answer_from_watches(body.question, existing)
@@ -509,7 +539,8 @@ def ask(pid: str, body: Question):
                 text = polished
         except (httpx.HTTPError, ValueError):
             pass
-    return {"text": text, "live": found["live"], "options": found["options"]}
+    text, listing = _with_list(text, found, body)
+    return {"text": text, "live": found["live"], "options": found["options"], "list": listing}
 
 
 def _answer_from_watches(question, existing):
@@ -517,4 +548,33 @@ def _answer_from_watches(question, existing):
         text = muse_mod.muse.answer(question, {"watches": _watch_summary(existing)})
     except httpx.HTTPError as e:
         raise HTTPException(502, f"Muse didn't answer: {e}")
-    return {"text": text, "live": muse_mod.LIVE, "options": []}
+    return {"text": text, "live": muse_mod.LIVE, "options": [], "list": None}
+
+
+def _with_list(text, found, body):
+    """Say which tab the new rows belong on, in the reply itself."""
+    options = found.get("options") or []
+    if not options:
+        return text, None
+    blob = f"{body.name} {body.question} {body.kind}".lower()
+    module = found.get("module")
+    if module == "flights":
+        listing = {"id": "flights", "title": "Flights", "kind": "options"}
+    elif module == "price" and ("decision" in body.kind or "car" in blob):
+        listing = {"id": "prices", "title": "Prices", "kind": "decision"}
+    elif module == "price":
+        listing = {"id": "prices", "title": "Prices", "kind": "options"}
+    elif module == "places" and any(word in blob for word in ("movie", "theater", "showtime")):
+        listing = {"id": "theaters", "title": "Theaters", "kind": "options"}
+    elif module == "places" and any(word in blob for word in ("dinner", "restaurant", "food", "eat")):
+        listing = {"id": "food", "title": "Food", "kind": "options"}
+    elif module == "places":
+        listing = {"id": "places", "title": "Places", "kind": "options"}
+    else:
+        return text, None
+    names = ", ".join(option.get("title") or "" for option in options[:3] if option.get("title"))
+    count = len(options)
+    lead = f"I added {count} to {listing['title']}" + (f": {names}." if names else ".")
+    if "added" not in text.lower():
+        text = f"{lead} {text}"
+    return text, listing

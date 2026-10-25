@@ -141,6 +141,8 @@ struct BoardOption: Identifiable, Hashable {
     var sharedFrom: ChatSource? = nil
     /// The Muse price watch on this option, when it's something you can book.
     var watchID: String? = nil
+    /// Which tab this row belongs on ("theaters", "food"). Empty rows sit on the first list.
+    var listID: String = ""
     var link: URL? = nil
 
     enum Vote { case up, down, none }

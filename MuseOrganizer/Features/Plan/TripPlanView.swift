@@ -7,9 +7,9 @@ import SwiftUI
 struct OptionList: View {
     @Environment(AppModel.self) private var model
     var plan: Plan
-    var category: OptionCategory
+    var tab: ShownTab
 
-    private var items: [BoardOption] { plan.options.filter { $0.category == category } }
+    private var items: [BoardOption] { plan.options(for: tab) }
     private var leaderID: BoardOption.ID? {
         items.filter { $0.upVotes > 0 }.max { $0.upVotes < $1.upVotes }?.id
     }
@@ -17,7 +17,7 @@ struct OptionList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if items.isEmpty {
-                Text(model.priceWatch.api == nil ? "No options yet." : "Searching \(category.rawValue.lowercased())…")
+                Text("Nothing on \(tab.title) yet. Ask Muse in the chat and it will say when it adds some.")
                     .font(.small).foregroundStyle(Palette.inkSecondary)
                     .padding(Space.m)
             }

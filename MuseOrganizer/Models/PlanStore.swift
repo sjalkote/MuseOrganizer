@@ -26,6 +26,8 @@ final class Plan: Identifiable {
     var watchRequest: WatchRequest?
     /// The message that started it ("@Muse find flights from Austin, 4 of us, $2,500 each"). Muse reads it to pick the plan's tabs.
     var request: String
+    /// Tabs Muse chose for this plan. Nil until the backend answers, and the keyword rules stand in.
+    var museSetup: PlanSetup? = nil
 
     // Live planner state
     var plannerStatus: String?        // "Searching Google Hotels…"
@@ -60,7 +62,7 @@ final class Plan: Identifiable {
     }
 
     /// Add places or prices a chat search just found, without clearing options already on the plan.
-    func addFound(_ live: [HuddleAPI.Board.Option]) {
+    func addFound(_ live: [HuddleAPI.Board.Option], listID: String) {
         let known = Set(options.map(\.title))
         for o in live where !known.contains(o.title) {
             let category: OptionCategory = switch o.category {
@@ -72,7 +74,7 @@ final class Plan: Identifiable {
                 category: category, title: o.title, detail: o.detail,
                 price: o.price.map(Money.format) ?? (o.priceLabel ?? ""), unit: o.unit, tradeoff: o.tradeoff,
                 source: o.source, fetched: "just now", upVotes: 0, downVotes: 0,
-                watchID: o.watchId, link: o.link.flatMap(URL.init(string:))
+                watchID: o.watchId, listID: listID, link: o.link.flatMap(URL.init(string:))
             ))
         }
     }
@@ -132,20 +134,19 @@ final class Plan: Identifiable {
     /// Muse answers from the plan's live searches and price watches. Without a backend, a scripted demo reply.
     private func runPlanner(for prompt: String) async {
         if let api = HuddleAPI.configured {
-            withAnimation(Motion.smooth) { plannerStatus = "Searching…" }
+            withAnimation(Motion.smooth) { plannerStatus = "Muse is searching…" }
             let started = Date.now
             let text: String
             do {
-                let kindName: String = switch kind {
-                case .trip: "trip"
-                case .decision: "decision"
-                case .gathering: "gathering"
-                case .general: "general"
-                }
                 let answer = try await api.ask(planID: id, question: prompt, name: name, kind: kindName)
                 text = answer.text
                 if !answer.options.isEmpty {
-                    addFound(answer.options)
+                    if let list = answer.list {
+                        ensureTab(list.id, title: list.title, kind: ShownTab.Kind(rawValue: list.kind) ?? .options)
+                        addFound(answer.options, listID: list.id)
+                    } else {
+                        addFound(answer.options, listID: tabs.first { $0.kind == .options }?.id ?? "places")
+                    }
                     planUpdated = true
                 }
             } catch {
@@ -156,7 +157,7 @@ final class Plan: Identifiable {
                 plannerStatus = nil
                 steps.append(AgentStep(tool: "Answer in the thread", detail: prompt, engine: "SerpApi", duration: seconds, credits: 1))
                 messages.append(Message(senderID: "planner", body: .planner(PlannerPost(
-                    text: text, trace: ["SerpApi · \(seconds.formatted(.number.precision(.fractionLength(1))))s", "Live search"]
+                    text: text, trace: ["Muse · \(seconds.formatted(.number.precision(.fractionLength(1))))s", "Added to the plan"]
                 )), time: Self.now()))
             }
             UINotificationFeedbackGenerator().notificationOccurred(.success)

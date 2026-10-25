@@ -78,6 +78,51 @@ enum PlanTab: String, Identifiable, Hashable {
     }
 }
 
+/// One tab Muse chose for this plan. The title is the plan's own word ("Theaters"), not a fixed label.
+struct ShownTab: Identifiable, Hashable {
+    enum Kind: String, Hashable { case overview, options, people, money, tasks, route, decision }
+
+    var id: String
+    var title: String
+    var symbol: String
+    var tint: Tint
+    var kind: Kind
+    /// The car screen still switches on these.
+    var decision: PlanTab?
+
+    static func make(id: String, title: String, kind: Kind) -> ShownTab {
+        let (symbol, tint, decision) = chrome(id: id, kind: kind)
+        return ShownTab(id: id, title: title, symbol: symbol, tint: tint, kind: kind, decision: decision)
+    }
+
+    private static func chrome(id: String, kind: Kind) -> (String, Tint, PlanTab?) {
+        switch id {
+        case "theaters": ("film", .activities, nil)
+        case "food", "places": ("fork.knife", .stays, nil)
+        case "flights": ("airplane", .flights, nil)
+        case "stays": ("bed.double.fill", .stays, nil)
+        case "todo": ("list.bullet", .activities, nil)
+        case "guests": ("person.2.fill", .activities, nil)
+        case "money": ("dollarsign.circle.fill", .money, nil)
+        case "route": ("car.fill", .car, nil)
+        case "gettingThere": ("tram.fill", .flights, nil)
+        case "options": ("square.grid.2x2.fill", .car, .options)
+        case "numbers": ("chart.bar.fill", .money, .numbers)
+        case "prices": ("chart.line.downtrend.xyaxis", .car, .prices)
+        default:
+            switch kind {
+            case .overview: ("sparkles.rectangle.stack", .neutral, nil)
+            case .options: ("mappin.and.ellipse", .stays, nil)
+            case .people: ("person.2.fill", .activities, nil)
+            case .money: ("dollarsign.circle.fill", .money, nil)
+            case .tasks: ("list.bullet", .activities, nil)
+            case .route: ("map", .car, nil)
+            case .decision: ("square.grid.2x2.fill", .car, .options)
+            }
+        }
+    }
+}
+
 /// What Muse understood from the request: the kind of plan, and the details that shape it.
 struct PlanSetup: Hashable {
     enum Style: String { case flightTrip, roadTrip, groundTrip, dinner, event, purchase }
@@ -87,15 +132,19 @@ struct PlanSetup: Hashable {
     var budget: String?
     /// Plain-language chips shown on the Overview ("Flying from Austin", "Vegan option").
     var chips: [String]
+    /// The tabs for this plan. Nil only for a setup built before Muse named them.
+    var tabs: [ShownTab]? = nil
 
-    /// Keyword rules for now; Muse returns the same shape from the backend when it's live.
-    static func infer(from request: String, kind: PlanKind) -> PlanSetup {
-        let text = request.lowercased()
+    /// Keyword fallback. Muse returns the same shape from POST /plans/setup when it is on.
+    static func infer(from request: String, kind: PlanKind, name: String = "", notes: String = "") -> PlanSetup {
+        let text = "\(name) \(request) \(notes)".lowercased()
         func has(_ words: String...) -> Bool { words.contains { text.contains($0) } }
 
         let style: Style
         if kind == .decision || has("lease", "buyout", "buy out", "car deal") {
             style = .purchase
+        } else if has("movie", "showtime", "theater", "theatre") {
+            style = .event
         } else if has("dinner", "lunch", "brunch", "restaurant", "where should we eat") && !has("trip", "weekend", "flight") {
             style = .dinner
         } else if has("birthday", "bachelorette", "party", "wedding", "concert") && !has("flight", "fly") {
@@ -104,6 +153,8 @@ struct PlanSetup: Hashable {
             style = .roadTrip
         } else if has("train", "bus", "amtrak") {
             style = .groundTrip
+        } else if kind == .gathering || kind == .general, !has("flight", "fly", "trip") {
+            style = .event
         } else {
             style = .flightTrip
         }
@@ -122,7 +173,7 @@ struct PlanSetup: Hashable {
         if has("queer", "lgbt") { chips.append("Queer-friendly") }
         if let near = match(#"near ([A-Z][a-zA-Z]+)"#, in: request) { chips.append("Near \(near)") }
         if has("secret", "surprise") { chips.append("Surprise: hidden from guest of honor") }
-        return PlanSetup(style: style, people: people, budget: budget, chips: chips)
+        return PlanSetup(style: style, people: people, budget: budget, chips: chips, tabs: ShownTab.forPlan(style: style, text: text, budget: budget != nil, people: people != nil))
     }
 
     private static func match(_ pattern: String, in text: String) -> String? {
@@ -134,36 +185,98 @@ struct PlanSetup: Hashable {
 }
 
 extension Plan {
-    var setup: PlanSetup { .infer(from: request, kind: kind) }
+    var setup: PlanSetup {
+        if let museSetup { return museSetup }
+        let thread = messages.suffix(8).compactMap { message -> String? in
+            if case .text(let text) = message.body { return text }
+            return nil
+        }.joined(separator: ". ")
+        return .infer(from: request, kind: kind, name: name, notes: "\(nextStep). \(thread)")
+    }
 
-    /// At most five tabs, chosen by the kind of plan. Money only shows once there's a budget,
-    /// and a list tab only shows once it has options (or Muse is still searching for them).
-    var tabs: [PlanTab] {
+    /// The first list Muse filled, so Overview can open it.
+    var nextTab: ShownTab? { tabs.first { $0.kind == .options } ?? tabs.first { $0.id != "overview" } }
+
+    var kindName: String {
+        switch kind {
+        case .trip: "trip"
+        case .decision: "decision"
+        case .gathering: "gathering"
+        case .general: "general"
+        }
+    }
+
+    func applyMuseSetup(_ shape: HuddleAPI.PlanShape) {
+        let fallback = setup
+        var chosen: [ShownTab] = []
+        for raw in shape.tabs {
+            guard let kind = ShownTab.Kind(rawValue: raw.kind), !chosen.contains(where: { $0.id == raw.id }) else { continue }
+            chosen.append(.make(id: raw.id, title: raw.title, kind: kind))
+        }
+        if chosen.first?.id != "overview" { chosen.insert(.make(id: "overview", title: "Overview", kind: .overview), at: 0) }
+        museSetup = PlanSetup(
+            style: PlanSetup.Style(rawValue: shape.style) ?? fallback.style,
+            people: shape.people ?? fallback.people,
+            budget: shape.budget ?? fallback.budget,
+            chips: shape.chips.isEmpty ? fallback.chips : shape.chips,
+            tabs: Array(chosen.prefix(5))
+        )
+    }
+
+    /// Tabs Muse named for this plan. At most five.
+    var tabs: [ShownTab] {
         let setup = setup
-        let all: [PlanTab] = switch setup.style {
-        case .flightTrip: [.overview, .flights, .stays, .todo, .money]
-        case .roadTrip: [.overview, .route, .stays, .todo, .money]
-        case .groundTrip: [.overview, .gettingThere, .stays, .todo, .money]
-        case .dinner: [.overview, .places, .guests]
-        case .event: [.overview, .places, .guests, .todo, .money]
-        case .purchase: [.overview, .options, .numbers, .prices]
-        }
-        return all.filter { tab in
-            if tab == .money { return setup.budget != nil || decided("Budget") != nil }
-            return true
-        }
+        let chosen = setup.tabs ?? ShownTab.forPlan(style: setup.style, text: "\(name) \(request)", budget: setup.budget != nil || decided("Budget") != nil, people: setup.people != nil)
+        return Array(chosen.prefix(5))
     }
 
-    func decision(for tab: PlanTab) -> Decision? {
-        guard let title = tab.decisionTitle else { return nil }
-        return decisions.first { $0.title == title }
+    /// Rows that belong on this tab. Untagged search results sit on the first list of their kind.
+    func options(for tab: ShownTab) -> [BoardOption] {
+        let tagged = options.filter { $0.listID == tab.id }
+        if !tagged.isEmpty { return tagged }
+        if tab.id == "flights" { return options.filter { $0.listID.isEmpty && $0.category == .flights } }
+        if tab.id == "stays" { return options.filter { $0.listID.isEmpty && $0.category == .stays } }
+        let lists = tabs.filter { $0.kind == .options && $0.id != "flights" && $0.id != "stays" }
+        guard lists.first?.id == tab.id else { return [] }
+        return options.filter { $0.listID.isEmpty && $0.category == .activities }
     }
 
-    /// The tab where the group has something to do next: the first one still being voted on, then the first open one.
-    var nextTab: PlanTab? {
-        let candidates = tabs.filter { $0 != .overview }
-        if let t = candidates.first(where: { if case .voting = decision(for: $0)?.state { true } else { false } }) { return t }
-        return candidates.first { if case .open = decision(for: $0)?.state { true } else { false } }
+    func ensureTab(_ id: String, title: String, kind: ShownTab.Kind) {
+        var shaped = museSetup ?? setup
+        var chosen = shaped.tabs ?? tabs
+        guard !chosen.contains(where: { $0.id == id }) else { return }
+        chosen.append(.make(id: id, title: title, kind: kind))
+        shaped.tabs = Array(chosen.prefix(5))
+        museSetup = shaped
+    }
+}
+
+extension ShownTab {
+    /// Local stand-in until Muse answers. A movie night gets Theaters, and Food only if the chat mentions eating.
+    static func forPlan(style: PlanSetup.Style, text: String, budget: Bool, people: Bool) -> [ShownTab] {
+        let low = text.lowercased()
+        func has(_ words: String...) -> Bool { words.contains { low.contains($0) } }
+        var rest: [ShownTab]
+        if style == .purchase {
+            rest = [.make(id: "options", title: "Options", kind: .decision), .make(id: "numbers", title: "Numbers", kind: .decision), .make(id: "prices", title: "Prices", kind: .decision)]
+        } else if has("movie", "showtime", "theater", "theatre") {
+            rest = [.make(id: "theaters", title: "Theaters", kind: .options)]
+            if has("eat", "food", "dinner", "restaurant") { rest.append(.make(id: "food", title: "Food", kind: .options)) }
+        } else if style == .dinner {
+            rest = [.make(id: "places", title: "Places", kind: .options)]
+            if people { rest.append(.make(id: "guests", title: "Who's in", kind: .people)) }
+        } else if style == .roadTrip {
+            rest = [.make(id: "route", title: "Route", kind: .route), .make(id: "stays", title: "Stays", kind: .options), .make(id: "todo", title: "Do", kind: .tasks)]
+        } else if style == .groundTrip {
+            rest = [.make(id: "gettingThere", title: "Getting there", kind: .route), .make(id: "stays", title: "Stays", kind: .options), .make(id: "todo", title: "Do", kind: .tasks)]
+        } else if style == .event {
+            rest = [.make(id: "places", title: "Places", kind: .options)]
+            if people { rest.append(.make(id: "guests", title: "Who's in", kind: .people)) }
+        } else {
+            rest = [.make(id: "flights", title: "Flights", kind: .options), .make(id: "stays", title: "Stays", kind: .options), .make(id: "todo", title: "Do", kind: .tasks)]
+        }
+        if budget, style != .purchase, style != .dinner { rest.append(.make(id: "money", title: "Money", kind: .money)) }
+        return [.make(id: "overview", title: "Overview", kind: .overview)] + rest
     }
 }
 

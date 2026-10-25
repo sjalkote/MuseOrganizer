@@ -82,6 +82,45 @@ SELECT_TOOL = {"type": "function", "function": {
         }, "required": ["role"]}},
     }, "required": ["calls", "files"]},
 }}
+SETUP_SYSTEM = (
+    "You are Muse, choosing the tabs for one group plan. Call record_setup once. "
+    "style is flightTrip, roadTrip, groundTrip, dinner, event, or purchase. "
+    "tabs is a list of objects with id, title, and kind. kind is overview, options, people, money, tasks, route, or decision. "
+    "Always start with overview. Use 2 to 5 tabs total, and name each title for this plan. "
+    "A movie night is Theaters, plus Food only if they mention eating. It is not Who's in and Do. "
+    "A dinner is Places, plus Who's in when they say how many people. "
+    "A flight trip is Flights, Stays, and Do. A road trip uses Route instead of Flights. "
+    "A car is Options, Numbers, and Prices, kind decision. Add Money only when the plan states a budget. "
+    "chips are short facts copied from the plan. Do not invent a city, date, budget, or constraint."
+)
+SETUP_TOOL = {"type": "function", "function": {
+    "name": "record_setup",
+    "description": "Record the tabs and the facts that shape this plan.",
+    "parameters": {"type": "object", "required": ["style", "tabs"], "properties": {
+        "style": {"type": "string", "enum": ["flightTrip", "roadTrip", "groundTrip", "dinner", "event", "purchase"]},
+        "tabs": {"type": "array", "items": {"type": "object", "required": ["id", "title", "kind"], "properties": {
+            "id": {"type": "string"}, "title": {"type": "string"},
+            "kind": {"type": "string", "enum": ["overview", "options", "people", "money", "tasks", "route", "decision"]},
+        }}},
+        "chips": {"type": "array", "items": {"type": "string"}},
+        "people": {"type": "integer"},
+        "budget": {"type": "string"},
+    }},
+}}
+MODULE_SYSTEM = (
+    "You are Muse, choosing one live search so a group chat can build a module. Call choose_module once. "
+    "module is places (where to go, restaurants, things to do, movies), price (track a price, including a car), "
+    "flights (only when two airports are named), or web. "
+    "subject is a short search query using only words from FACTS. Do not invent a city, date, airport, or price."
+)
+MODULE_TOOL = {"type": "function", "function": {
+    "name": "choose_module",
+    "description": "Choose the SerpAPI module and the search query for this message.",
+    "parameters": {"type": "object", "required": ["module", "subject"], "properties": {
+        "module": {"type": "string", "enum": ["places", "price", "flights", "web"]},
+        "subject": {"type": "string"},
+    }},
+}}
 
 
 def _schema_tool(fields):
@@ -147,6 +186,17 @@ class Muse:
             {"role": "user", "content": f"PLAN:\n{json.dumps(plan)}\n\nQUESTION:\n{question}"},
         ])
         return msg.get("content") or ""
+
+    def plan_setup(self, facts):
+        """Muse picks the tabs for this plan. Raises if it declines."""
+        return self._tool(SETUP_SYSTEM, facts, SETUP_TOOL)
+
+    def choose_module(self, facts):
+        """Muse picks which live search builds the next module. Raises if it declines."""
+        out = self._tool(MODULE_SYSTEM, facts, MODULE_TOOL)
+        if out.get("module") not in ("places", "price", "flights", "web"):
+            raise ValueError(f"unexpected module {out.get('module')!r}")
+        return {"module": out["module"], "subject": out.get("subject") or ""}
 
     def select_outputs(self, plan):
         """Muse picks the SerpAPI searches and Drive files for this plan. Raises if it declines."""
@@ -238,6 +288,15 @@ class MockMuse:
             return f"{demo} {w['advice']['headline']}. My call: {verdict}. {w['advice']['reason']}"
         w = min(topic, key=lambda w: w["current"])
         return f"{demo} I'm watching {len(topic)} prices. Lowest: {w['label']} at ${w['current']:,.0f} {w.get('unit', '')}.".rstrip()
+
+    def plan_setup(self, facts):
+        from .tabs import infer
+        return infer(facts.get("name", ""), facts.get("kind", ""), facts.get("request", ""), facts.get("notes", ""))
+
+    def choose_module(self, facts):
+        from .lookup import classify
+        module, subject = classify(facts.get("question", ""), facts.get("name", ""), facts.get("kind", ""))
+        return {"module": module, "subject": subject}
 
     def select_outputs(self, plan):
         from .workspace import heuristic_outputs

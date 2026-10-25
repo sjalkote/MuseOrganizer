@@ -63,6 +63,12 @@ With the backend restarted and both flags set, build Japan, the car, and Friday 
 
 `backend/huddle/engine.py` calls `muse.explain` (`safe_explain`) and `muse.extract` for the private-constraints session. Those follow the import-time client, not `MUSE_ENABLED`. Once `MODEL_API_KEY` is present at startup, those calls are live even if folder builds stay on the local chooser. Gate them with `builds_use_muse()` if they should wait too.
 
-Chat (`@Muse` / `@Planner`) already searches SerpAPI for places and prices when `HUDDLE_BACKEND_URL` is set. That path does not need `MODEL_API_KEY`. Turning Muse on lets `POST /plans/{id}/ask` polish those search results. With no backend URL, the replies in `PlanStore.runPlanner` stay scripted.
+With `MUSE_ENABLED=1` and `MODEL_API_KEY`, three more calls go live:
+
+- `POST /plans/setup` asks Muse for the tabs (`record_setup`). Unknown tabs are dropped, money is dropped when the plan has no budget, and chips that are not in the plan text are dropped. The app falls back to `tabs.infer` if Muse declines.
+- `POST /plans/{id}/ask` asks Muse which module to run (`choose_module`: places, price, flights, or web), SerpAPI runs that search, then Muse writes the reply from those results only.
+- Questions about prices already being watched still answer from the watches.
+
+With no backend URL, the replies in `PlanStore.runPlanner` stay scripted, and tabs fall back to `PlanSetup.infer`.
 
 The build sheet copy (“Choosing the searches…”, “Writing …”) does not name Muse. Put that wording back only if the live call is actually on.
