@@ -70,7 +70,7 @@ struct HuddleAPI {
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             let detail = (try? JSONDecoder().decode(ServerError.self, from: data))?.detail
-            throw WorkspaceError.server(detail ?? "The Huddle backend returned \(http.statusCode).")
+            throw WorkspaceError.server(detail ?? "The NxT backend returned \(http.statusCode).")
         }
         return try JSONDecoder().decode(T.self, from: data)
     }

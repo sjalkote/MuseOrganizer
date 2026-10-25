@@ -28,7 +28,7 @@ struct SharedView: View {
                                     .font(.title)
                                     .foregroundStyle(Palette.inkFaint)
                                 Text("You're all caught up").font(.bodyStrong).foregroundStyle(Palette.ink)
-                                Text("Anything your group shares into Huddle shows up here.")
+                                Text("Anything your group shares into NxT shows up here.")
                                     .font(.small).foregroundStyle(Palette.inkSecondary)
                                     .multilineTextAlignment(.center)
                             }
@@ -145,7 +145,7 @@ private struct HowSharingWorks: View {
                 .padding(.bottom, Space.s)
             VStack(alignment: .leading, spacing: Space.s) {
                 step(1, "Tap Share on a reel, post, message, or link")
-                step(2, "Choose Huddle, then pick the plan")
+                step(2, "Choose NxT, then pick the plan")
                 step(3, "It becomes an option the group can vote on")
             }
         }

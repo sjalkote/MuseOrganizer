@@ -88,7 +88,7 @@ struct ConnectGoogleSheet: View {
 
             VStack(alignment: .leading, spacing: Space.s) {
                 Text("Connect Google Drive").font(.heading).foregroundStyle(Palette.ink)
-                Text("Huddle builds one folder per plan in your Drive.").font(.bodyRegular).foregroundStyle(Palette.inkSecondary)
+                Text("NxT builds one folder per plan in your Drive.").font(.bodyRegular).foregroundStyle(Palette.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 

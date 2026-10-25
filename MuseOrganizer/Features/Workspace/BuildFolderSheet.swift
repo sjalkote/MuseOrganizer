@@ -141,7 +141,7 @@ struct BuildFolderSheet: View {
             VStack(alignment: .leading, spacing: Space.m) {
                 Text("\(session.blueprint.files.count) files in Google Drive")
                     .font(.bodyStrong).foregroundStyle(Palette.ink)
-                Text("Built from \(session.blueprint.calls.count) searches. Share the link and everyone can open it, no Huddle needed.")
+                Text("Built from \(session.blueprint.calls.count) searches. Share the link and everyone can open it, no app needed.")
                     .font(.small).foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 Button { onOpenFolder() } label: { Label("Open folder", systemImage: "folder") }

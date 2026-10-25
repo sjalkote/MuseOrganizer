@@ -105,7 +105,7 @@ struct GoogleWorkspaceService: WorkspaceService {
     private static func check(_ response: URLResponse, _ body: Data?) throws {
         guard let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) else { return }
         let detail = body.flatMap { try? JSONDecoder().decode(ServerError.self, from: $0) }?.detail
-        throw WorkspaceError.server(detail ?? "The Huddle backend returned \(http.statusCode).")
+        throw WorkspaceError.server(detail ?? "The NxT backend returned \(http.statusCode).")
     }
 
     private static func event(_ name: String, _ payload: Data, _ blueprint: WorkspaceBlueprint) throws -> BuildEvent? {

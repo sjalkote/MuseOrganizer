@@ -16,7 +16,9 @@ struct MuseOrganizerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            IntroHost {
+                ContentView()
+            }
                 .environment(model)
                 .tint(Palette.accent)
                 .task {

@@ -13,7 +13,7 @@ struct PlansView: View {
                         NavigationLink(value: plan.id) { PlanRow(plan: plan) }
                             .buttonStyle(.pressable)
                     }
-                    Label("Mention @Muse in your group chat, or share something into Huddle, to start a plan.",
+                    Label("Mention @Muse in your group chat, or share something into NxT, to start a plan.",
                           systemImage: "info.circle")
                         .font(.small)
                         .foregroundStyle(Palette.inkSecondary)

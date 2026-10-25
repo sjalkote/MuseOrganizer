@@ -167,7 +167,7 @@ final class Plan: Identifiable {
                     card: .init(title: "Stays · Kyoto", rows: [
                         .init(label: "Ryokan Yachiyo", detail: "4.7 rating · breakfast included", value: "$250"),
                         .init(label: "Kyoto Machiya House", detail: "4.8 rating · current pick", value: "$214"),
-                    ], action: "Vote in Huddle"),
+                    ], action: "Vote in NxT"),
                     trace: ["Google Hotels · 1.9s"]
                 ),
                 option: BoardOption(category: .stays, title: "Ryokan Yachiyo", detail: "4.7 rating · 2 rooms · breakfast included", price: "$250", unit: "per night", tradeoff: "Pricier, but steps from Gion with breakfast.", source: "Google Hotels", fetched: "just now", upVotes: 0, downVotes: 0)
@@ -182,7 +182,7 @@ final class Plan: Identifiable {
                 text: "Day 3 is open. A sumo morning practice is the most-saved thing to do in Tokyo in late March.",
                 card: .init(title: "Things to do · Day 3", rows: [
                     .init(label: "Sumo morning practice", detail: "Ryogoku · 2.5 hours", value: "$85"),
-                ], action: "Vote in Huddle"),
+                ], action: "Vote in NxT"),
                 trace: ["Google Maps · 1.4s"]
             ),
             option: BoardOption(category: .activities, title: "Sumo morning practice", detail: "Ryogoku · 2.5 hours · English guide", price: "$85", unit: "per person", tradeoff: "Up close and unforgettable. 7:30 AM start.", source: "Google Maps", fetched: "just now", upVotes: 0, downVotes: 0)

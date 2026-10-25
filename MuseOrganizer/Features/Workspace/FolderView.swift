@@ -41,7 +41,7 @@ struct FolderView: View {
             .alert("Demo folder", isPresented: $showDemoNote) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("In the demo the folder lives in Huddle. Once Google Drive is connected for real, this opens it in Drive.")
+                Text("In the demo the folder lives in NxT. Once Google Drive is connected for real, this opens it in Drive.")
             }
         }
     }

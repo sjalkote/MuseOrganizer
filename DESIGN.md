@@ -1,6 +1,12 @@
-# Huddle — design direction (v3)
+# NxT (formerly Huddle) — design direction
+
+Tagline: *what's next?*
 
 Huddle is the decision layer for group chats you already have. It does **not** replace WhatsApp, iMessage, or Instagram. The chat stays messy and fun (that's the point of a friend chat). Huddle keeps the clean, shared Plan that everyone votes on.
+
+## Brand and intro
+- **Logo** (`DesignSystem/Logo.swift`): "NxT" in New York serif (italic, lighter x) on the dusk mesh gradient shared with plan covers and Muse. The app icon is rendered from this same view by `scripts/render-icon.swift` (standard, dark, tinted).
+- **Intro** (`Features/Intro/IntroView.swift`, ~2 s, tap to skip): the mark blurs in and springs into place, a soft shine crosses it, *what's next?* fades up, then it lifts away while Home fades up from 97% scale. The launch screen uses the same paper color (`LaunchBackground`), so launch → intro → Home never flashes. Reduce Motion gets a plain fade.
 
 ## Structure (bottom tab bar: Home · Plans · Messages)
 - **Home**: greeting, the next plan as a cover, Muse's most important price call, **Needs you**, **Start a plan**.

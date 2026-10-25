@@ -38,7 +38,7 @@ enum Mock {
                 .init(label: "Olive & Ember", detail: "Mediterranean · vegan menu · 0.4 mi", value: "$34"),
                 .init(label: "Taqueria Luz", detail: "Mexican · vegan tacos · 0.6 mi", value: "$22"),
                 .init(label: "Little Saigon Kitchen", detail: "Vietnamese · tofu pho · 0.3 mi", value: "$26"),
-            ], action: "Vote in Huddle")
+            ], action: "Vote in NxT")
         )), time: "5:44 PM"),
         Message(senderID: "lu", body: .text("olive & ember!! their mezze is so good"), time: "5:47 PM"),
     ]
@@ -78,7 +78,7 @@ enum Mock {
                 .init(label: "ANA via LAX", detail: "1 stop · 17h 40m", value: "$1,148"),
                 .init(label: "JAL via DFW", detail: "1 stop · 16h 05m", value: "$1,312"),
                 .init(label: "United via SFO", detail: "1 stop · leaves Mar 27", value: "$1,089"),
-            ], action: "Vote in Huddle"),
+            ], action: "Vote in NxT"),
             trace: ["Read 5 messages", "Google Flights · 2.1s", "Checked calendars"]
         )), time: "7:06 PM"),
         Message(senderID: "sam", body: .text("ANA one looks good, voted"), time: "7:08 PM"),
@@ -161,7 +161,7 @@ enum Mock {
             card: .init(title: "RAV4 lease · 4 options", rows: [
                 .init(label: "Buy out", detail: "60-month loan", value: "$478/mo"),
                 .init(label: "Return & lease new", detail: "plus ~$1,140 fees", value: "$429/mo"),
-            ], action: "Compare in Huddle"),
+            ], action: "Compare in NxT"),
             trace: ["Lease account (simulated)", "Google Shopping · 2.4s", "Cost model · 4 scenarios"]
         )), time: "8:15 PM"),
         Message(senderID: "mom", body: .text("Okay that's convincing. Can we talk to someone first?"), time: "8:17 PM"),

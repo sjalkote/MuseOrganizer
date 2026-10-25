@@ -38,7 +38,7 @@ final class PriceWatchCenter {
 
     /// "Demo data" when nothing live, else which side is still simulated.
     var sourceNote: String {
-        guard api != nil else { return "Demo data · connect the Huddle backend" }
+        guard api != nil else { return "Demo data · connect the NxT backend" }
         guard let live else { return "Connecting to Muse…" }
         switch (live.muse, live.serpapi) {
         case (true, true): return "Live · Muse Spark + SerpApi"

@@ -221,7 +221,7 @@ struct WatchListSheet: View {
 
     private var footer: String {
         if center.api == nil {
-            return "These are demo prices. Run the Huddle backend with SerpApi and Muse keys and Muse re-checks every price on a schedule, updates your Budget Tracker sheet, and notifies you when it's the right time to book."
+            return "These are demo prices. Run the NxT backend with SerpApi and Muse keys and Muse re-checks every price on a schedule, updates your Budget Tracker sheet, and notifies you when it's the right time to book."
         }
         return "Muse re-checks with SerpApi on a schedule. When a price moves, Muse Spark decides whether to book now or wait, and your Budget Tracker sheet is updated."
     }

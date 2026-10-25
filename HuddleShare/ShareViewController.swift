@@ -132,7 +132,7 @@ struct ShareView: View {
                 .padding(Space.m)
                 .background(Palette.panel)
             }
-            .navigationTitle("Add to Huddle")
+            .navigationTitle("Add to NxT")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }
