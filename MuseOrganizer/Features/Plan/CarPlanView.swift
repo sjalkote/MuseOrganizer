@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CarPlanView: View {
+    @Environment(AppModel.self) private var model
     @Bindable var plan: Plan
     var openThread: () -> Void
 
@@ -12,6 +13,7 @@ struct CarPlanView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.m) {
                 Panel { PlanHeader(plan: plan) }
+                MuseWatchCard(plan: plan)
                 Panel { snapshot }
                 Panel { options }
                 recommendation
@@ -21,6 +23,8 @@ struct CarPlanView: View {
             .padding(.top, Space.s)
             .padding(.bottom, Space.xxl)
         }
+        .refreshable { await model.priceWatch.check(plan.id) }
+        .task { await model.priceWatch.load(plan) }
     }
 
     // MARK: Lease snapshot

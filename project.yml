@@ -31,6 +31,9 @@ targets:
       path: Config/Huddle-Info.plist
       properties:
         LSApplicationQueriesSchemes: [whatsapp, instagram, sms]
+        # Muse price watch re-checks prices when iOS wakes the app (PriceWatchCenter.refreshTaskID).
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.sjalkote.MuseOrganizer.pricewatch]
         # Plan folders use the Huddle backend when this is set (docs/GOOGLE_WORKSPACE_SETUP.md).
         HUDDLE_BACKEND_URL: $(HUDDLE_BACKEND_URL)
         # Plain http to localhost / the Mac's LAN address while developing.

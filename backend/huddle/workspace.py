@@ -13,6 +13,7 @@ import re
 import shutil
 import threading
 import time
+import urllib.parse
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -51,11 +52,12 @@ class Build:
             raise Cancelled
 
 
-def start(plan, make_drive, pace=None):
-    """Run a build in the background; `make_drive` is called on the worker thread (it may hit the network)."""
+def start(plan, make_drive, pace=None, on_done=None):
+    """Run a build in the background; `make_drive` is called on the worker thread (it may hit the network).
+    `on_done(plan, files)` runs after a successful build."""
     b = Build()
     BUILDS[b.id] = b
-    threading.Thread(target=run, args=(b, plan, make_drive, pace), daemon=True).start()
+    threading.Thread(target=run, args=(b, plan, make_drive, pace, on_done), daemon=True).start()
     return b
 
 
@@ -95,6 +97,25 @@ class MockDrive:
         path = Path(folder) / f"{title}.md"
         path.write_text("\n".join(lines) + "\n")
         return path.as_uri()
+
+    @staticmethod
+    def path_of(url):
+        return Path(urllib.parse.unquote(urllib.parse.urlparse(url).path))
+
+    def read_sheet(self, url):
+        """(columns, rows) from a sheet this drive wrote; the footer after the blank row is left out."""
+        with self.path_of(url).open(newline="") as f:
+            values = list(csv.reader(f))
+        rows = []
+        for r in values[1:]:
+            if not any(r):
+                break
+            rows.append(r)
+        return values[0], rows
+
+    def update_sheet(self, url, columns, rows, footer=None):
+        with self.path_of(url).open("w", newline="") as f:
+            csv.writer(f).writerows([columns, *rows, *([[], [footer]] if footer else [])])
 
     def share(self, folder):
         return f"https://drive.google.com/drive/folders/huddle-mock-{Path(folder).name}"
@@ -463,7 +484,7 @@ def write(file, research):
 # MARK: - Build
 
 
-def run(b, plan, make_drive, pace=None):
+def run(b, plan, make_drive, pace=None, on_done=None):
     drive, folder = None, None
     try:
         drive = make_drive()
@@ -498,6 +519,11 @@ def run(b, plan, make_drive, pace=None):
         b.check()
         b.emit("finished", folderName=plan["folderName"], url=drive.share(folder), files=files, calls=calls,
                mock=getattr(drive, "mock", False))
+        if on_done:
+            try:
+                on_done(plan, files)
+            except Exception:
+                pass  # bookkeeping only; the folder is already built
     except Exception as e:
         if folder:  # never leave a half-built folder behind
             try:

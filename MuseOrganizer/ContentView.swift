@@ -23,9 +23,6 @@ struct ContentView: View {
                 SharedView()
             }
             .badge(model.pendingShared.count)
-            Tab("Apps", systemImage: "link", value: AppModel.AppTab.apps) {
-                ConnectionsView()
-            }
         }
         .onOpenURL { model.handle($0) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in

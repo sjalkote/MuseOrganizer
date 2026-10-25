@@ -8,14 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		1497F946D0819899FA097381 /* ActivitySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */; };
-		18D46B03400959251258E5CB /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13289BA8D1B2235C06491E /* ConnectionsView.swift */; };
 		1FFF30404C63C530EADADFA2 /* HuddleShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D48B951487C4A8F4523AD17D /* HuddleShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		23AE019ACBAAA5612C86F687 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
 		30D6D87778C997FEF6104960 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143E90EC06CE7F1624E951BB /* Components.swift */; };
 		396A8EF2FFF3E67539FABA4E /* Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A0D81D7081997147A0B62F /* Workspace.swift */; };
 		432D63FB6F0BCF058D3AF59E /* WorkspaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */; };
+		449D84629E4DBF1A5651C4AF /* MuseWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 869867C9D7A8874580E1817B /* MuseWatch.swift */; };
 		4A0A9D0ADB524B34830EE7D6 /* FolderButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D1F819D6680FF5E8D75945 /* FolderButton.swift */; };
 		5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E7484E60D9C03DD7B18D4E /* PlansView.swift */; };
+		5DB35B658E2199065353B795 /* HuddleAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57078C531C4CAF962A4EE206 /* HuddleAPI.swift */; };
 		64F57F92F1AEC85E6788895B /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 379E4D9C420168A138CCD996 /* MockData.swift */; };
 		6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068BC743F0D15D2C30A3190F /* NewPlanSheet.swift */; };
 		7172FF5DAB27D887DFCAF40D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4EDB568F4BFCAC6FBCB395 /* ContentView.swift */; };
@@ -24,7 +25,9 @@
 		81822825091575FB6D304D4C /* MessagesRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CBB734EF692EA1AB0287755 /* MessagesRootView.swift */; };
 		8536EDFCF27FAF53EDE91265 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
 		890AAB9FE1BBE4C365A9C67A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C6EE26839EA899A5DDD02345 /* Assets.xcassets */; };
+		899E708FC80C17A32A0AACA1 /* PriceWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6E6DE1FC060EA9FEBF80D4 /* PriceWatch.swift */; };
 		9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D618C8271DE9E39BB5A01C4 /* HomeView.swift */; };
+		9FA569DB8BF2E1536B2D6620 /* PlanCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDA0EEB9BD9B4A3F1D65540 /* PlanCover.swift */; };
 		A250955421281AD21BDBB3C3 /* HuddleMessages.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 155D68F10F774301D0AD1EF4 /* HuddleMessages.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A537FE9CC09393F3274D3EAF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C8C4C90DE0394012083C0D /* Theme.swift */; };
 		A5F1F6F3C4532EE746B78047 /* TripPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 958A8B86BAA23A6D2816901E /* TripPlanView.swift */; };
@@ -32,6 +35,7 @@
 		AAB8A2775ADDF8236ADC33C4 /* BuildFolderSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */; };
 		B16C314AF84582BC56DA2EB6 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3245450D1D959FC4561A433C /* SharedStore.swift */; };
 		C7D7D77046747A40051A0A50 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B867A1464B3924BC752DED9 /* ThreadView.swift */; };
+		CB488F9032FA72A00F2E88C7 /* PriceWatchCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAF67726EA11C95C17C23A5B /* PriceWatchCenter.swift */; };
 		CD5FB35D8D7FEABFB27C2E93 /* ChatBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAC66336F707981247D5FF6 /* ChatBridge.swift */; };
 		D6D8E6D0F5A9A0BADD10A5F9 /* CarPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */; };
 		D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706C916B4B32C9C603D997D6 /* FolderView.swift */; };
@@ -84,18 +88,22 @@
 		2A0053CAD8678923CF76C0C5 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		3245450D1D959FC4561A433C /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 		379E4D9C420168A138CCD996 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
+		3E6E6DE1FC060EA9FEBF80D4 /* PriceWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceWatch.swift; sourceTree = "<group>"; };
 		43B62779B37BDB97883B3B52 /* MuseOrganizerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseOrganizerApp.swift; sourceTree = "<group>"; };
 		48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceService.swift; sourceTree = "<group>"; };
+		57078C531C4CAF962A4EE206 /* HuddleAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HuddleAPI.swift; sourceTree = "<group>"; };
 		5B867A1464B3924BC752DED9 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
 		5D618C8271DE9E39BB5A01C4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		6AAC66336F707981247D5FF6 /* ChatBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBridge.swift; sourceTree = "<group>"; };
 		706C916B4B32C9C603D997D6 /* FolderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderView.swift; sourceTree = "<group>"; };
 		744E7E1EDDC5308F887BF6BC /* CarPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlanView.swift; sourceTree = "<group>"; };
-		7C13289BA8D1B2235C06491E /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsView.swift; sourceTree = "<group>"; };
+		7BDA0EEB9BD9B4A3F1D65540 /* PlanCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanCover.swift; sourceTree = "<group>"; };
 		84C4FFFED6C6B7C9E6D07D46 /* BuildFolderSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildFolderSheet.swift; sourceTree = "<group>"; };
+		869867C9D7A8874580E1817B /* MuseWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseWatch.swift; sourceTree = "<group>"; };
 		90E7484E60D9C03DD7B18D4E /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
 		958A8B86BAA23A6D2816901E /* TripPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlanView.swift; sourceTree = "<group>"; };
 		B7D8E81FAACD14B59D6775C3 /* ActivitySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySheet.swift; sourceTree = "<group>"; };
+		BAF67726EA11C95C17C23A5B /* PriceWatchCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceWatchCenter.swift; sourceTree = "<group>"; };
 		BEA1A4A66AD5C560925CE8E4 /* MuseOrganizer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MuseOrganizer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6EE26839EA899A5DDD02345 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C70DB825BAC5B7DEAD922194 /* PlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanStore.swift; sourceTree = "<group>"; };
@@ -140,13 +148,13 @@
 			isa = PBXGroup;
 			children = (
 				17932AB071BBEBD9A72B7D97 /* Activity */,
-				4BDD7CADFA27769F3193007A /* Connections */,
 				CEFE14CE9968314AC094BD09 /* Home */,
 				6DD5FC9B58CD70EB8004ABC7 /* NewPlan */,
 				3C7DF7FC955E562902878378 /* Plan */,
 				BFD489B25CF37BD7D9E64F2E /* Plans */,
 				37F1957BE0A135AB89C223B1 /* Shared */,
 				D4E01749D45056CBD9AE9BA8 /* Thread */,
+				DEBED73595C735DEE920CC81 /* Watch */,
 				CB3694A2446E84259165EE4F /* Workspace */,
 			);
 			path = Features;
@@ -166,18 +174,11 @@
 			path = MuseOrganizer;
 			sourceTree = "<group>";
 		};
-		4BDD7CADFA27769F3193007A /* Connections */ = {
-			isa = PBXGroup;
-			children = (
-				7C13289BA8D1B2235C06491E /* ConnectionsView.swift */,
-			);
-			path = Connections;
-			sourceTree = "<group>";
-		};
 		59A19D7456B8CFA21B1BFB71 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
 				143E90EC06CE7F1624E951BB /* Components.swift */,
+				7BDA0EEB9BD9B4A3F1D65540 /* PlanCover.swift */,
 				F9C8C4C90DE0394012083C0D /* Theme.swift */,
 			);
 			path = DesignSystem;
@@ -251,6 +252,8 @@
 			isa = PBXGroup;
 			children = (
 				6AAC66336F707981247D5FF6 /* ChatBridge.swift */,
+				57078C531C4CAF962A4EE206 /* HuddleAPI.swift */,
+				BAF67726EA11C95C17C23A5B /* PriceWatchCenter.swift */,
 				48C64C8CC151E7BF277A8C38 /* WorkspaceService.swift */,
 			);
 			path = Integrations;
@@ -272,6 +275,14 @@
 			path = Thread;
 			sourceTree = "<group>";
 		};
+		DEBED73595C735DEE920CC81 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				869867C9D7A8874580E1817B /* MuseWatch.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
 		F9546E70B8E1B5757D8BD4F8 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -286,6 +297,7 @@
 				379E4D9C420168A138CCD996 /* MockData.swift */,
 				27A60E7C5C290FA4FF45A19C /* Models.swift */,
 				C70DB825BAC5B7DEAD922194 /* PlanStore.swift */,
+				3E6E6DE1FC060EA9FEBF80D4 /* PriceWatch.swift */,
 				D0A0D81D7081997147A0B62F /* Workspace.swift */,
 			);
 			path = Models;
@@ -435,18 +447,22 @@
 				D6D8E6D0F5A9A0BADD10A5F9 /* CarPlanView.swift in Sources */,
 				CD5FB35D8D7FEABFB27C2E93 /* ChatBridge.swift in Sources */,
 				30D6D87778C997FEF6104960 /* Components.swift in Sources */,
-				18D46B03400959251258E5CB /* ConnectionsView.swift in Sources */,
 				7172FF5DAB27D887DFCAF40D /* ContentView.swift in Sources */,
 				4A0A9D0ADB524B34830EE7D6 /* FolderButton.swift in Sources */,
 				D8D71A7E353A4782D4129920 /* FolderView.swift in Sources */,
 				9A52F0950168AC6DFD78C8D9 /* HomeView.swift in Sources */,
+				5DB35B658E2199065353B795 /* HuddleAPI.swift in Sources */,
 				64F57F92F1AEC85E6788895B /* MockData.swift in Sources */,
 				E19435ACFF7266CC571962AC /* Models.swift in Sources */,
 				EF9892CE6140DECDF4C97F12 /* MuseOrganizerApp.swift in Sources */,
+				449D84629E4DBF1A5651C4AF /* MuseWatch.swift in Sources */,
 				6F185B5CC9ED414F238A45CB /* NewPlanSheet.swift in Sources */,
+				9FA569DB8BF2E1536B2D6620 /* PlanCover.swift in Sources */,
 				76A822D88C10CE0DE472B3CC /* PlanStore.swift in Sources */,
 				7D1AEA3AAEF158F510E4B21B /* PlanView.swift in Sources */,
 				5C8303CBAAC5873EF10C4AEF /* PlansView.swift in Sources */,
+				899E708FC80C17A32A0AACA1 /* PriceWatch.swift in Sources */,
+				CB488F9032FA72A00F2E88C7 /* PriceWatchCenter.swift in Sources */,
 				DDDD81B89027C14389DA9EB5 /* SharedStore.swift in Sources */,
 				A70006B21984CE7BB2F24709 /* SharedView.swift in Sources */,
 				EF477B4B35643D0C43948362 /* Theme.swift in Sources */,
@@ -685,6 +701,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				HUDDLE_BACKEND_URL = "";
 				INFOPLIST_FILE = "Config/Huddle-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Huddle;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -713,6 +730,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				HUDDLE_BACKEND_URL = "";
 				INFOPLIST_FILE = "Config/Huddle-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Huddle;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

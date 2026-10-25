@@ -4,6 +4,7 @@ struct PlanView: View {
     @Bindable var plan: Plan
     @State private var tab: Tab = .plan
     @State private var showActivity = false
+    @State private var showShare = false
 
     enum Tab: String, CaseIterable { case plan = "Plan", thread = "Thread" }
 
@@ -41,8 +42,22 @@ struct PlanView: View {
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 FolderButton(plan: plan)
-                Button("Planner activity", systemImage: "list.bullet.rectangle") { showActivity = true }
+                Menu("More", systemImage: "ellipsis") {
+                    Button("Post update to \(plan.chatName)", systemImage: "arrow.up.message") {
+                        if !ChatBridge.open(ChatBridge.composeURL(for: plan.source, text: plan.chatUpdate)) { showShare = true }
+                    }
+                    if plan.kind == .trip {
+                        ShareLink(item: CalendarExport.file(for: plan),
+                                  preview: SharePreview("\(plan.name).ics", image: Image(systemName: "calendar"))) {
+                            Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                        }
+                    }
+                    Button("Planner activity", systemImage: "list.bullet.rectangle") { showActivity = true }
+                }
             }
+        }
+        .sheet(isPresented: $showShare) {
+            ActivityView(items: [plan.chatUpdate]).presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showActivity) {
             ActivitySheet(plan: plan)
@@ -85,72 +100,5 @@ struct PlanHeader: View {
             }
         }
         .accessibilityElement(children: .contain)
-    }
-}
-
-/// Compact two-column grid of what the group has and hasn't decided.
-struct DecisionList: View {
-    var decisions: [Decision]
-    var note: String? = nil
-
-    private let columns = [GridItem(.flexible(), spacing: Space.s), GridItem(.flexible(), spacing: Space.s)]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            LazyVGrid(columns: columns, spacing: Space.s) {
-                ForEach(decisions) { d in
-                    HStack(spacing: Space.s) {
-                        TintTile(symbol: d.symbol, tint: d.tint, size: 24)
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack(spacing: 4) {
-                                Text(d.title).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
-                                Spacer(minLength: 0)
-                                statusMark(d)
-                            }
-                            Text(value(d)).font(.smallStrong).foregroundStyle(Palette.ink).lineLimit(1)
-                        }
-                    }
-                    .padding(.horizontal, Space.s)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Palette.fill.opacity(0.7), in: .rect(cornerRadius: Radius.s + 2, style: .continuous))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(d.title): \(value(d)), \(stateName(d))")
-                }
-            }
-            if let note {
-                Label(note, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(Palette.caution)
-            }
-        }
-    }
-
-    /// Short value for the tile: the decided value, or what's happening.
-    private func value(_ d: Decision) -> String {
-        switch d.state {
-        case .decided(let s): s
-        case .voting: "Voting now"
-        case .open: "Not started"
-        }
-    }
-
-    private func stateName(_ d: Decision) -> String {
-        switch d.state {
-        case .decided: "decided"
-        case .voting(let s): "voting, \(s)"
-        case .open(let s): "open, \(s)"
-        }
-    }
-
-    @ViewBuilder private func statusMark(_ d: Decision) -> some View {
-        switch d.state {
-        case .decided:
-            Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(Palette.positive)
-        case .voting:
-            Circle().fill(Palette.accent).frame(width: 7, height: 7)
-        case .open:
-            Circle().strokeBorder(Palette.inkFaint, lineWidth: 1.5).frame(width: 7, height: 7)
-        }
     }
 }

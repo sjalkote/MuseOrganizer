@@ -139,6 +139,9 @@ struct BoardOption: Identifiable, Hashable {
     var isTopPick = false
     var sharedBy: String? = nil      // member id, when it came from a shared link
     var sharedFrom: ChatSource? = nil
+    /// The Muse price watch on this option, when it's something you can book.
+    var watchID: String? = nil
+    var link: URL? = nil
 
     enum Vote { case up, down, none }
 }

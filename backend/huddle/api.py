@@ -8,7 +8,9 @@ what they are allowed to see. ponytail: no auth (member_id is trusted); add sign
 this leaves the demo.
 """
 import asyncio
+import contextlib
 import dataclasses
+import time
 import json
 import os
 import sqlite3
@@ -18,12 +20,31 @@ import uuid
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from . import engine, google, workspace
+from . import board, engine, google, serp, watch, workspace
+from . import muse as muse_mod
 from .templates import TEMPLATES
 
-app = FastAPI(title="Huddle")
+# Seconds between price-watch sweeps; 0 turns the background sweep off (the app can still ask for a check).
+WATCH_INTERVAL = float(os.environ.get("HUDDLE_WATCH_INTERVAL", "21600"))
+
+
+async def _sweep():
+    while True:
+        await asyncio.sleep(WATCH_INTERVAL)
+        await asyncio.to_thread(watch.check_all)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(_app):
+    task = asyncio.create_task(_sweep()) if WATCH_INTERVAL > 0 else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="Huddle", lifespan=lifespan)
 DB = os.environ.get("HUDDLE_DB", "huddle.db")
 SESSIONS: dict[str, engine.Session] = {}
 # ponytail: one global lock around every mutation; per-session locks if many groups get busy at once.
@@ -273,8 +294,16 @@ def build_workspace(pid: str, body: BuildPlan):
         make = lambda: google.Drive(token)
     else:
         make = workspace.MockDrive
-    b = workspace.start({"planId": pid, **body.model_dump()}, make)
+    b = workspace.start({"planId": pid, **body.model_dump()}, make, on_done=lambda plan, files: _remember_budget(pid, plan, files))
     return {"buildId": b.id, "mode": "google" if google.configured() else "mock"}
+
+
+def _remember_budget(pid, plan, files):
+    """Point the plan's price watches at the Budget Tracker this build wrote."""
+    sheet = next((f for f in files if f["name"].lower() == "budget tracker" and f.get("url")), None)
+    if sheet:
+        cap = plan.get("context", {}).get("budgetPerPerson")
+        watch.register_budget(pid, sheet["url"], workspace.travelers(plan), float(cap) if cap else None)
 
 
 @app.get("/builds/{bid}/events")
@@ -334,3 +363,112 @@ def google_callback(code: str = "", error: str = ""):
 def google_code(body: AuthCode):
     _store_token(body.serverAuthCode, redirect_uri="")
     return google_status()
+
+
+# MARK: - Live board and Muse price watch (huddle/board.py, huddle/watch.py)
+
+
+class Flight(BaseModel):
+    model_config = {"populate_by_name": True}
+    from_: str = Field(alias="from")
+    to: str
+    depart: str
+    return_: str = Field(alias="return")
+
+
+class Stay(BaseModel):
+    area: str
+    checkIn: str
+    checkOut: str
+    rooms: int = 1
+
+
+class Trip(BaseModel):
+    travelers: int = 1
+    budgetPerPerson: float | None = None
+    flights: list[Flight] = []
+    stays: list[Stay] = []
+    activities: list[str] = []
+
+
+class NewWatch(BaseModel):
+    category: str
+    label: str
+    engine: str
+    params: dict[str, str | int] = {}
+    match: str = ""
+    detail: str = ""
+    unit: str = ""
+    neededBy: str | None = None
+
+
+class Question(BaseModel):
+    question: str
+
+
+@app.get("/status")
+def status():
+    """Which services are live. Anything not live runs on labeled demo data."""
+    return {"muse": muse_mod.LIVE, "serpapi": serp.LIVE, "google": google.configured(), "watchInterval": WATCH_INTERVAL}
+
+
+@app.post("/plans/{pid}/board")
+def trip_board(pid: str, body: Trip):
+    trip = body.model_dump(by_alias=True)
+    trip["flights"] = [{"from": f["from"], "to": f["to"], "depart": f["depart"], "return": f["return"]} for f in trip["flights"]]
+    try:
+        return board.build(pid, trip)
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"SerpApi search failed: {e}")
+
+
+@app.get("/plans/{pid}/watches")
+def plan_watches(pid: str):
+    return {"watches": watch.for_plan(pid), "alerts": watch.alerts(plan_id=pid)[-20:]}
+
+
+@app.post("/plans/{pid}/watches")
+def add_watch(pid: str, body: NewWatch):
+    found = watch.find(pid, body.engine, body.params, body.match)
+    if found:
+        return found
+    try:
+        seed = serp.search(body.engine, **body.params)
+    except (httpx.HTTPError, KeyError) as e:
+        raise HTTPException(400, f"can't search {body.engine}: {e}")
+    return watch.create(pid, body.category, body.label, body.engine, body.params, match=body.match, detail=body.detail,
+                        unit=body.unit, needed_by=body.neededBy, seed=seed)
+
+
+@app.delete("/watches/{wid}")
+def stop_watch(wid: str):
+    watch.remove(wid)
+    return {"removed": wid}
+
+
+@app.post("/plans/{pid}/watches/check")
+def check_now(pid: str):
+    """Re-check every watch on the plan right away (the app's pull-to-refresh and background refresh)."""
+    try:
+        new = watch.check_plan(pid)
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"SerpApi search failed: {e}")
+    return {"alerts": new, "watches": watch.for_plan(pid)}
+
+
+@app.get("/alerts")
+def all_alerts(since: float = 0):
+    """Alerts newer than `since` (unix seconds) across every plan; the app turns each into a notification."""
+    return {"alerts": watch.alerts(since), "now": time.time()}
+
+
+@app.post("/plans/{pid}/ask")
+def ask(pid: str, body: Question):
+    """The Planner's reply in the thread: Muse answers from the plan's live board and watches."""
+    plan = {"watches": [{k: w[k] for k in ("category", "label", "detail", "unit", "current", "low", "high")} | {"advice": w["advice"]}
+                        for w in watch.for_plan(pid)]}
+    try:
+        text = muse_mod.muse.answer(body.question, plan)
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"Muse didn't answer: {e}")
+    return {"text": text, "live": muse_mod.LIVE}

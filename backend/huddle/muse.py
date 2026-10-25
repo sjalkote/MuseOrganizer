@@ -26,6 +26,40 @@ EXTRACT_SYSTEM = (
     "You are Muse, privately helping one person state their constraints. "
     "Call record_constraints with only what the user actually said. Leave out anything not stated."
 )
+ADVISE_SYSTEM = (
+    "You are Muse, watching prices for a group that is planning a purchase or booking. "
+    "From FACTS (the item, its price history, the typical range, and how long until it's needed), decide whether "
+    "the group should book now, wait, or keep watching, and call record_advice. "
+    "headline: under 60 characters, names the item and the change in dollars. "
+    "reason: one or two plain sentences using only numbers from FACTS. Never invent a forecast you can't support."
+)
+TRADEOFF_SYSTEM = (
+    "You are Muse, helping a group compare options. For each option in FACTS, write one short trade-off "
+    "(under 70 characters) that says what's good and what's the catch, using only facts given. "
+    "Call record_tradeoffs with one entry per option id."
+)
+ANSWER_SYSTEM = (
+    "You are Muse, the planner inside a group chat. Answer QUESTION in 1-3 short, friendly sentences using only "
+    "PLAN (live search results and price watches). If PLAN doesn't cover it, say what you'd search for next."
+)
+
+ADVICE_TOOL = {"type": "function", "function": {
+    "name": "record_advice",
+    "description": "Record whether the group should act on this price now.",
+    "parameters": {"type": "object", "required": ["verdict", "headline", "reason"], "properties": {
+        "verdict": {"type": "string", "enum": ["book", "wait", "watch"]},
+        "headline": {"type": "string"},
+        "reason": {"type": "string"},
+    }},
+}}
+TRADEOFF_TOOL = {"type": "function", "function": {
+    "name": "record_tradeoffs",
+    "description": "Record one short trade-off per option.",
+    "parameters": {"type": "object", "required": ["tradeoffs"], "properties": {"tradeoffs": {
+        "type": "array", "items": {"type": "object", "required": ["id", "text"],
+                                   "properties": {"id": {"type": "string"}, "text": {"type": "string"}}},
+    }}},
+}}
 
 
 def _schema_tool(fields):
@@ -65,6 +99,33 @@ class Muse:
         ])
         return msg.get("content") or draft
 
+    def _tool(self, system, facts, tool):
+        msg = self._chat(
+            [{"role": "system", "content": system}, {"role": "user", "content": f"FACTS:\n{json.dumps(facts)}"}],
+            tools=[tool], tool_choice={"type": "function", "function": {"name": tool["function"]["name"]}},
+        )
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            raise ValueError("Muse didn't call the tool")
+        return json.loads(calls[0]["function"]["arguments"])
+
+    def advise(self, facts):
+        out = self._tool(ADVISE_SYSTEM, facts, ADVICE_TOOL)
+        if out.get("verdict") not in ("book", "wait", "watch"):
+            raise ValueError(f"unexpected verdict {out.get('verdict')!r}")
+        return {k: out[k] for k in ("verdict", "headline", "reason")}
+
+    def tradeoffs(self, options):
+        out = self._tool(TRADEOFF_SYSTEM, options, TRADEOFF_TOOL)
+        return {t["id"]: t["text"] for t in out.get("tradeoffs", []) if t.get("id") and t.get("text")}
+
+    def answer(self, question, plan):
+        msg = self._chat([
+            {"role": "system", "content": ANSWER_SYSTEM},
+            {"role": "user", "content": f"PLAN:\n{json.dumps(plan)}\n\nQUESTION:\n{question}"},
+        ])
+        return msg.get("content") or ""
+
     def transcribe(self, wav: bytes) -> str:
         # WAV only: mono, 16-bit PCM, 16 or 24 kHz, <=10 min.
         req = {"mode": "PUSH_TO_TALK", "model": "muse-voice-transcribe-1.0", "audioEncoding": "WAV"}
@@ -102,6 +163,47 @@ class MockMuse:
     def explain(self, facts, draft):
         return draft
 
+    def advise(self, facts):
+        """Rule of thumb: a drop to (near) the lowest price seen means book; a rise close to the date means book."""
+        name, unit = facts["item"], facts.get("unit", "")
+        old, new, low = facts["previous"], facts["current"], facts["lowest_seen"]
+        diff = new - old
+        days = facts.get("days_until")
+        each = f" {unit}" if unit else ""
+        if diff < 0:
+            headline = f"{name} dropped ${abs(diff):,.0f} to ${new:,.0f}"
+            if new <= low * 1.01:
+                return {"verdict": "book", "headline": headline,
+                        "reason": f"That's the lowest price seen so far (${new:,.0f}{each}). Prices this low rarely last."}
+            return {"verdict": "watch", "headline": headline,
+                    "reason": f"Cheaper, but still above the low of ${low:,.0f}{each}. Worth waiting a few days."}
+        headline = f"{name} rose ${diff:,.0f} to ${new:,.0f}"
+        if days is not None and days < 45:
+            return {"verdict": "book", "headline": headline,
+                    "reason": f"Only {days} days to go, and prices usually climb from here. Book soon."}
+        return {"verdict": "wait", "headline": headline,
+                "reason": f"Still {days} days out. It was ${low:,.0f}{each} before, so it may come back down."
+                if days is not None else f"It was ${low:,.0f}{each} before, so it may come back down."}
+
+    def tradeoffs(self, options):
+        return {o["id"]: o.get("draft", "") for o in options}
+
+    def answer(self, question, plan):
+        demo = "(Demo: add MODEL_API_KEY for Muse's real answer.)"
+        watching = [w for w in plan.get("watches", []) if w.get("current")]
+        if not watching:
+            return f"{demo} I don't have live prices for that yet."
+        words = question.lower()
+        topic = [w for w in watching if (w.get("category") == "flights" and "flight" in words)
+                 or (w.get("category") == "stays" and any(k in words for k in ("hotel", "stay")))] or watching
+        advised = [w for w in topic if w.get("advice")]
+        if advised:
+            w = max(advised, key=lambda w: w["advice"]["at"])
+            verdict = {"book": "Book now", "wait": "Wait", "watch": "Keep watching"}[w["advice"]["verdict"]]
+            return f"{demo} {w['advice']['headline']}. My call: {verdict}. {w['advice']['reason']}"
+        w = min(topic, key=lambda w: w["current"])
+        return f"{demo} I'm watching {len(topic)} prices. Lowest: {w['label']} at ${w['current']:,.0f} {w.get('unit', '')}.".rstrip()
+
     def transcribe(self, wav):
         return "We need 7 seats and I'd like to keep it under $650 a month."
 
@@ -111,3 +213,4 @@ class MockMuse:
 
 
 muse = Muse(KEY) if KEY else MockMuse()
+LIVE = bool(KEY)

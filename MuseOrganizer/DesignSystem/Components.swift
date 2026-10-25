@@ -40,22 +40,35 @@ struct AvatarStack: View {
     }
 }
 
-// MARK: - Planner identity
-// Indigo is the Planner's color. No sparkles, no gradients.
+// MARK: - Muse identity
+// The Planner is Muse. Its mark is the amber-to-rose gradient, used only where Muse is acting.
+
+struct MuseMark: View {
+    var size: CGFloat = 22
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Palette.museGradient)
+            Text("M")
+                .font(.system(size: size * 0.52, weight: .bold, design: .serif))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel("Muse")
+    }
+}
 
 struct PlannerLabel: View {
     var working = false
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(Palette.accent)
-                .frame(width: 8, height: 8)
-                .opacity(working ? 0.4 : 1)
+            MuseMark(size: 16)
+                .opacity(working ? 0.5 : 1)
                 .animation(working ? .easeInOut(duration: 0.6).repeatForever() : .default, value: working)
-            Text("Planner")
+            Text("Muse")
                 .font(.smallStrong)
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.muse)
         }
     }
 }
@@ -128,7 +141,7 @@ struct VoteControl: View {
                 Text("\(count)").figure().contentTransition(.numericText())
             }
             .font(compact ? .caption.weight(.semibold) : .smallStrong)
-            .foregroundStyle(selected ? Palette.accent : Palette.inkSecondary)
+            .foregroundStyle(selected ? Palette.ink : Palette.inkSecondary)
             .frame(minWidth: compact ? 46 : 64, minHeight: compact ? 32 : 44)
             .contentShape(.rect)
         }
@@ -139,7 +152,7 @@ struct VoteControl: View {
 }
 
 // MARK: - Panels
-// Every distinct area of a screen is a Panel on the gray canvas, so sections never blur together.
+// A card floating on warm paper: big soft corners and one gentle shadow, no borders.
 
 struct Panel<Content: View>: View {
     var padding: CGFloat = Space.m
@@ -151,10 +164,11 @@ struct Panel<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(fill, in: .rect(cornerRadius: Radius.l, style: .continuous))
+            .cardShadow()
     }
 }
 
-/// Colored icon tile that gives each kind of thing its identity.
+/// Quiet icon in a soft circle. Color lives in the symbol, not a loud tile.
 struct TintTile: View {
     var symbol: String
     var tint: Tint
@@ -162,10 +176,11 @@ struct TintTile: View {
 
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: size * 0.42, weight: .semibold))
+            .font(.system(size: size * 0.4, weight: .medium))
+            .symbolRenderingMode(.hierarchical)
             .foregroundStyle(tint.strong)
             .frame(width: size, height: size)
-            .background(tint.soft, in: .rect(cornerRadius: size * 0.3, style: .continuous))
+            .background(tint.soft.opacity(0.8), in: .circle)
             .accessibilityHidden(true)
     }
 }
@@ -231,7 +246,7 @@ struct SectionTitle: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).font(.heading).foregroundStyle(Palette.ink)
+            Text(title).font(.title).foregroundStyle(Palette.ink)
             Spacer()
             if let detail {
                 Text(detail).font(.small).foregroundStyle(Palette.inkSecondary)
@@ -249,9 +264,9 @@ struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.bodyStrong)
-            .foregroundStyle(Palette.onAccent)
+            .foregroundStyle(Palette.onCta)
             .frame(maxWidth: .infinity, minHeight: 52)
-            .background(Palette.accent.opacity(isEnabled ? 1 : 0.35), in: .capsule)
+            .background(Palette.cta.opacity(isEnabled ? 1 : 0.35), in: .capsule)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(Motion.snappy, value: configuration.isPressed)

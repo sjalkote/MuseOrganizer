@@ -4,6 +4,7 @@ Setup: docs/GOOGLE_WORKSPACE_SETUP.md. Needs the web OAuth client in GOOGLE_CLIE
 Docs: https://developers.google.com/drive/api/reference/rest/v3, /sheets/api/reference/rest, /docs/api/reference/rest.
 """
 import os
+import re
 import urllib.parse
 
 import httpx
@@ -104,6 +105,30 @@ class Drive:
         self._call("POST", f"https://docs.googleapis.com/v1/documents/{f['id']}:batchUpdate",
                    json={"requests": doc_requests(blocks)})
         return f["webViewLink"]
+
+    @staticmethod
+    def _sheet_id(url):
+        m = re.search(r"/spreadsheets/d/([\w-]+)", url)
+        if not m:
+            raise ValueError(f"not a Google Sheets link: {url}")
+        return m.group(1)
+
+    def read_sheet(self, url):
+        """(columns, rows) of the first tab, stopping at the blank row before the footer."""
+        base = f"https://sheets.googleapis.com/v4/spreadsheets/{self._sheet_id(url)}"
+        values = self._call("GET", f"{base}/values/A1:Z500").get("values", [])
+        rows = []
+        for r in values[1:]:
+            if not any(r):
+                break
+            rows.append(r)
+        return (values[0] if values else []), rows
+
+    def update_sheet(self, url, columns, rows, footer=None):
+        base = f"https://sheets.googleapis.com/v4/spreadsheets/{self._sheet_id(url)}"
+        self._call("POST", f"{base}/values/A1:Z500:clear")
+        values = [columns, *rows, *([[], [footer]] if footer else [])]
+        self._call("PUT", f"{base}/values/A1", params={"valueInputOption": "USER_ENTERED"}, json={"values": values})
 
     def share(self, folder):
         self._call("POST", f"{DRIVE}/{folder}/permissions", json={"type": "anyone", "role": "reader"})

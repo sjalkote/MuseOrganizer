@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Landing screen: what's coming up, what needs you, and a fast way to start something new.
+/// Landing screen: the next trip as an invitation-style cover, Muse's latest call, what needs you,
+/// and a fast way to start something new.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @State private var showNewPlan = false
@@ -11,15 +12,24 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.m) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     greeting
-                        .padding(.bottom, Space.s)
-                    if let trip { UpNextCard(plan: trip) { model.open(planID: trip.id) } }
+                    if let trip {
+                        VStack(spacing: Space.s + 4) {
+                            UpNextCover(plan: trip) { model.open(planID: trip.id) }
+                            if let (plan, watch, advice) = topCall {
+                                MuseCallRow(plan: plan, watch: watch, advice: advice, isDemo: model.priceWatch.isDemo) {
+                                    model.open(planID: plan.id)
+                                }
+                            }
+                        }
+                    }
                     needsYou
                     startPlan
                     latest
                 }
                 .padding(.horizontal, Space.m)
+                .padding(.top, Space.s)
                 .padding(.bottom, Space.xxl)
             }
             .background(Palette.canvas)
@@ -40,79 +50,106 @@ struct HomeView: View {
     // MARK: Greeting
 
     private var greeting: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.smallStrong)
-                .foregroundStyle(Palette.inkSecondary)
+                .eyebrowStyle()
             Text("Good evening, Devin")
-                .font(.hero)
+                .font(.display)
                 .foregroundStyle(Palette.ink)
         }
         .accessibilityElement(children: .combine)
     }
 
+    // MARK: Muse
+
+    /// The newest "book now" or "keep watching" call across plans: the one thing worth acting on today.
+    private var topCall: (Plan, PriceWatch, PriceAdvice)? {
+        model.plans
+            .compactMap { plan in model.priceWatch.latestAdvice(for: plan.id).map { (plan, $0.0, $0.1) } }
+            .filter { $0.2.verdict == .book || $0.2.verdict == .watch }
+            .max { a, b in
+                // Book-now calls beat keep-watching; then the newest wins.
+                (a.2.verdict == .book ? 1 : 0, a.2.at) < (b.2.verdict == .book ? 1 : 0, b.2.at)
+            }
+    }
+
+    private var otherCalls: [(Plan, PriceAdvice)] {
+        model.plans
+            .compactMap { plan in model.priceWatch.latestAdvice(for: plan.id).map { (plan, $0.1) } }
+            .filter { ($0.1.verdict == .book || $0.1.verdict == .watch) && $0.1.id != topCall?.2.id }
+    }
+
     // MARK: Needs you
 
     private var needsYou: some View {
-        Panel {
-            PanelHeader(title: "Needs you", subtitle: "3 things across 2 plans", symbol: "bell.fill", tint: .planner)
-                .padding(.bottom, Space.s)
-
-            if let trip {
-                ActionRow(symbol: "ticket.fill", tint: .activities,
-                          title: "Pick things to do",
-                          detail: "\(trip.name) · nobody has voted yet") { model.open(planID: trip.id) }
-                Hairline(inset: 56)
+        VStack(alignment: .leading, spacing: Space.s + 4) {
+            SectionTitle(title: "Needs you", detail: "\(3 + otherCalls.count) things")
+            Panel(padding: 0) {
+                ForEach(otherCalls, id: \.1.id) { plan, advice in
+                    ActionRow(symbol: advice.verdict.symbol, tint: Tint(strong: advice.verdict.color, soft: advice.verdict.color.opacity(0.12)),
+                              title: advice.headline,
+                              detail: "Muse · \(advice.verdict.title) · \(plan.name)") { model.open(planID: plan.id) }
+                    Hairline(inset: 72)
+                }
+                if let trip {
+                    ActionRow(symbol: "ticket", tint: .activities,
+                              title: "Pick things to do",
+                              detail: "\(trip.name) · nobody has voted yet") { model.open(planID: trip.id) }
+                    Hairline(inset: 72)
+                }
+                if let car {
+                    ActionRow(symbol: "calendar", tint: .dates,
+                              title: "Book the dealer visit",
+                              detail: "\(car.name) · Mom wants to talk to someone first") { model.open(planID: car.id) }
+                    Hairline(inset: 72)
+                }
+                ActionRow(symbol: "square.and.arrow.down", tint: ChatSource.instagram.tint,
+                          title: "\(model.pendingShared.count) links shared with you",
+                          detail: "Maya, Jordan, and Sam · add them to a plan") { model.tab = .shared }
             }
-            if let car {
-                ActionRow(symbol: "calendar", tint: .dates,
-                          title: "Book the dealer visit",
-                          detail: "\(car.name) · Mom wants to talk to someone first") { model.open(planID: car.id) }
-                Hairline(inset: 56)
-            }
-            ActionRow(symbol: ChatSource.instagram.symbol, tint: ChatSource.instagram.tint,
-                      title: "\(model.pendingShared.count) links shared with you",
-                      detail: "Maya, Jordan, and Sam · add them to a plan") { model.tab = .shared }
         }
     }
 
     // MARK: Start a plan
 
     private var startPlan: some View {
-        Panel(padding: 0) {
-            Text("Start a plan")
-                .font(.heading)
-                .foregroundStyle(Palette.ink)
-                .padding([.horizontal, .top], Space.m)
-                .padding(.bottom, Space.m)
+        VStack(alignment: .leading, spacing: Space.s + 4) {
+            SectionTitle(title: "Start a plan")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Space.s) {
+                HStack(spacing: Space.s + 4) {
                     template("Trip", "airplane", .flights)
                     template("Big purchase", "car.fill", .car)
                     template("Dinner", "fork.knife", .stays)
-                    template("Event", "ticket.fill", .activities)
+                    template("Event", "party.popper.fill", .activities)
                     template("Gift", "gift.fill", .dates)
                 }
                 .padding(.horizontal, Space.m)
+                .padding(.vertical, Space.s + 4) // room for the card shadow
             }
-            .padding(.bottom, Space.m)
+            .padding(.horizontal, -Space.m)
+            .padding(.vertical, -Space.s - 4)
         }
     }
 
+    /// Airbnb-style category tile: a big, colored glyph on a white card, the name underneath.
     private func template(_ title: String, _ symbol: String, _ tint: Tint) -> some View {
         Button { showNewPlan = true } label: {
-            VStack(alignment: .leading, spacing: Space.l) {
+            VStack(alignment: .leading, spacing: 0) {
                 Image(systemName: symbol)
-                    .font(.title2.weight(.semibold))
+                    .font(.system(size: 30, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(tint.strong)
+                    .frame(width: 52, height: 52)
+                    .background(tint.soft, in: .circle)
+                Spacer(minLength: Space.m)
                 Text(title)
-                    .font(.bodyStrong)
+                    .font(.smallStrong)
                     .foregroundStyle(Palette.ink)
             }
-            .frame(width: 112, height: 112, alignment: .topLeading)
+            .frame(width: 104, height: 124, alignment: .topLeading)
             .padding(Space.m)
-            .frame(width: 112 + Space.m * 2, alignment: .leading)
-            .background(tint.soft, in: .rect(cornerRadius: Radius.m, style: .continuous))
+            .background(Palette.panel, in: .rect(cornerRadius: Radius.l, style: .continuous))
+            .cardShadow()
         }
         .buttonStyle(.pressable)
         .accessibilityLabel("Start a \(title) plan")
@@ -121,39 +158,44 @@ struct HomeView: View {
     // MARK: Latest from chats
 
     private var latest: some View {
-        Panel {
-            PanelHeader(title: "From your chats", subtitle: "Latest Planner replies", symbol: "bubble.left.and.bubble.right.fill", tint: .neutral)
-                .padding(.bottom, Space.m)
-            ForEach(Array(model.plans.enumerated()), id: \.element.id) { index, plan in
-                if let post = plan.messages.last(where: { if case .planner = $0.body { true } else { false } }),
-                   case .planner(let p) = post.body {
-                    Button { model.open(planID: plan.id) } label: {
-                        VStack(alignment: .leading, spacing: Space.s) {
-                            HStack {
+        VStack(alignment: .leading, spacing: Space.s + 4) {
+            SectionTitle(title: "From your chats")
+            Panel(padding: 0) {
+                ForEach(Array(model.plans.enumerated()), id: \.element.id) { index, plan in
+                    if let post = plan.messages.last(where: { if case .planner = $0.body { true } else { false } }),
+                       case .planner(let p) = post.body {
+                        Button { model.open(planID: plan.id) } label: {
+                            VStack(alignment: .leading, spacing: Space.s) {
+                                HStack(spacing: Space.s) {
+                                    PlannerLabel()
+                                    Text("in \(plan.chatName)").font(.small).foregroundStyle(Palette.inkSecondary)
+                                    Spacer()
+                                    Text(post.time).font(.small).foregroundStyle(Palette.inkSecondary)
+                                }
+                                Text(p.text)
+                                    .font(.bodyRegular)
+                                    .foregroundStyle(Palette.ink)
+                                    .lineLimit(3)
+                                    .multilineTextAlignment(.leading)
                                 AppPill(source: plan.source)
-                                Text(plan.chatName).font(.smallStrong).foregroundStyle(Palette.ink)
-                                Spacer()
-                                Text(post.time).font(.small).foregroundStyle(Palette.inkSecondary)
                             }
-                            Text(p.text)
-                                .font(.bodyRegular)
-                                .foregroundStyle(Palette.ink)
-                                .lineLimit(3)
-                                .multilineTextAlignment(.leading)
+                            .padding(Space.m)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
                         }
-                        .padding(.vertical, Space.m)
+                        .buttonStyle(.pressable)
+                        if index < model.plans.count - 1 { Hairline(inset: Space.m) }
                     }
-                    .buttonStyle(.pressable)
-                    if index < model.plans.count - 1 { Hairline() }
                 }
             }
         }
     }
 }
 
-// MARK: - Up next hero
+// MARK: - Up next cover
 
-private struct UpNextCard: View {
+/// The next trip as an invitation: mood colors, the name in serif, a countdown, and who's going.
+private struct UpNextCover: View {
     var plan: Plan
     var action: () -> Void
 
@@ -164,41 +206,39 @@ private struct UpNextCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: Space.l) {
-                HStack {
-                    Label("Up next", systemImage: "airplane")
-                        .font(.smallStrong)
-                        .foregroundStyle(.white.opacity(0.85))
-                    Spacer()
-                    AvatarStack(members: plan.members, size: 28)
-                }
-
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(plan.name).font(.heading).foregroundStyle(.white)
-                    HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                        Text("\(daysAway)").font(.hero).figure().foregroundStyle(.white)
-                        Text("days to go · Mar 26").font(.bodyRegular).foregroundStyle(.white.opacity(0.85))
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: Space.s) {
-                    HStack(spacing: 4) {
-                        ForEach(0..<plan.decisions.count, id: \.self) { i in
-                            Capsule().fill(.white.opacity(i < plan.decidedCount ? 1 : 0.25)).frame(height: 4)
-                        }
-                    }
+            PlanCover(theme: plan.cover, height: 300) {
+                VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        Text("\(plan.decidedCount) of \(plan.decisions.count) decided")
-                            .font(.small).foregroundStyle(.white.opacity(0.85))
+                        GlassChip { Label("Up next", systemImage: "airplane") }
                         Spacer()
-                        Text(plan.nextStep).font(.smallStrong).foregroundStyle(.white)
-                        Image(systemName: "chevron.right").font(.small).foregroundStyle(.white.opacity(0.85))
+                        AvatarStack(members: plan.members, size: 30)
                     }
+                    Spacer(minLength: Space.l)
+                    Text(plan.name)
+                        .font(.display)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                    Text("\(plan.decided("Dates") ?? "Dates TBD") · \(daysAway) days to go")
+                        .font(.bodyStrong)
+                        .foregroundStyle(.white.opacity(0.92))
+                        .padding(.top, 4)
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        CoverProgress(decided: plan.decidedCount, total: plan.decisions.count)
+                        HStack(spacing: Space.s) {
+                            Text("\(plan.decidedCount) of \(plan.decisions.count) decided")
+                            Spacer(minLength: Space.s)
+                            Text("Next: \(plan.nextStep)").lineLimit(1)
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                    }
+                    .padding(Space.s + 4)
+                    .glassEffect(.cover, in: .rect(cornerRadius: Radius.m, style: .continuous))
+                    .padding(.top, Space.m)
                 }
+                .padding(Space.m + 2)
             }
-            .padding(Space.l)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.accent, in: .rect(cornerRadius: Radius.l, style: .continuous))
         }
         .buttonStyle(.pressable)
         .accessibilityElement(children: .combine)
@@ -206,7 +246,49 @@ private struct UpNextCard: View {
     }
 }
 
-/// Row with a colored tile, used for to-dos and settings-like lists.
+// MARK: - Muse's call
+
+/// Hopper-style: one clear verdict, the headline, and the price line, right under the trip it's about.
+private struct MuseCallRow: View {
+    var plan: Plan
+    var watch: PriceWatch
+    var advice: PriceAdvice
+    var isDemo: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Space.m) {
+                MuseMark(size: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(advice.verdict.title)
+                            .font(.smallStrong)
+                            .foregroundStyle(advice.verdict.color)
+                        Text("· Muse\(isDemo ? " · demo" : "")")
+                            .font(.small)
+                            .foregroundStyle(Palette.inkSecondary)
+                    }
+                    Text(advice.headline)
+                        .font(.bodyStrong)
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                Sparkline(prices: watch.prices, tint: advice.verdict.color)
+                    .frame(width: 64, height: 32)
+            }
+            .padding(Space.m)
+            .background(Palette.panel, in: .rect(cornerRadius: Radius.l, style: .continuous))
+            .cardShadow()
+        }
+        .buttonStyle(.pressable)
+        .accessibilityHint("Opens \(plan.name)")
+    }
+}
+
+/// Row with a quiet leading icon, used for to-dos.
 struct ActionRow: View {
     var symbol: String
     var tint: Tint
@@ -219,13 +301,15 @@ struct ActionRow: View {
             HStack(spacing: Space.m) {
                 TintTile(symbol: symbol, tint: tint, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.bodyStrong).foregroundStyle(Palette.ink)
+                    Text(title).font(.bodyStrong).foregroundStyle(Palette.ink).lineLimit(2)
+                        .multilineTextAlignment(.leading)
                     Text(detail).font(.small).foregroundStyle(Palette.inkSecondary).lineLimit(1)
                 }
                 Spacer(minLength: Space.s)
-                Image(systemName: "chevron.right").font(.small).foregroundStyle(Palette.inkFaint)
+                Image(systemName: "chevron.right").font(.small.weight(.semibold)).foregroundStyle(Palette.inkFaint)
             }
-            .padding(.vertical, Space.m)
+            .padding(.horizontal, Space.m)
+            .padding(.vertical, Space.m - 2)
             .contentShape(.rect)
         }
         .buttonStyle(.pressable)

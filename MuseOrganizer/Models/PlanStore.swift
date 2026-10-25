@@ -20,6 +20,10 @@ final class Plan: Identifiable {
 
     /// The Google Drive folder built for this plan, once someone builds it.
     var workspace: PlanWorkspace?
+    /// What the backend searches for this trip's live options.
+    var tripQuery: TripQuery?
+    /// What Muse watches for a decision plan (the car's market price).
+    var watchRequest: WatchRequest?
 
     // Live planner state
     var plannerStatus: String?        // "Searching Google Hotels…"
@@ -32,14 +36,43 @@ final class Plan: Identifiable {
     init(id: String, name: String, kind: PlanKind, source: ChatSource, chatName: String, members: [Member],
          decisions: [Decision], nextStep: String, messages: [Message], options: [BoardOption] = [],
          itinerary: [ItineraryDay] = [], leaseOptions: [LeaseOption] = [], steps: [AgentStep],
-         sources: [SourceRef], unread: Int) {
+         sources: [SourceRef], unread: Int, tripQuery: TripQuery? = nil, watchRequest: WatchRequest? = nil) {
         self.id = id; self.name = name; self.kind = kind; self.source = source; self.chatName = chatName
         self.members = members; self.decisions = decisions; self.nextStep = nextStep; self.messages = messages
         self.options = options; self.itinerary = itinerary; self.leaseOptions = leaseOptions
         self.steps = steps; self.sources = sources; self.unread = unread
+        self.tripQuery = tripQuery; self.watchRequest = watchRequest
     }
 
     func member(_ id: String) -> Member? { members.first { $0.id == id } }
+
+    /// The decided value of a checklist item ("Dates" → "Mar 26 – Apr 4").
+    func decided(_ title: String) -> String? {
+        guard case .decided(let value) = decisions.first(where: { $0.title == title })?.state else { return nil }
+        return value
+    }
+
+    func decision(for category: OptionCategory) -> Decision? {
+        decisions.first { $0.title == category.rawValue }
+    }
+
+    /// Swap in live options from the backend. Links people shared stay; votes start fresh on new options.
+    func replaceOptions(with live: [HuddleAPI.Board.Option]) {
+        let shared = options.filter { $0.sharedBy != nil }
+        options = live.map { o in
+            let category: OptionCategory = switch o.category {
+            case "flights": .flights
+            case "stays": .stays
+            default: .activities
+            }
+            return BoardOption(
+                category: category, title: o.title, detail: o.detail,
+                price: o.price.map(Money.format) ?? (o.priceLabel ?? ""), unit: o.unit, tradeoff: o.tradeoff,
+                source: o.source, fetched: "just now", upVotes: 0, downVotes: 0,
+                watchID: o.watchId, link: o.link.flatMap(URL.init(string:))
+            )
+        } + shared
+    }
 
     var lastMessagePreview: String {
         guard let m = messages.last else { return "" }
@@ -70,13 +103,33 @@ final class Plan: Identifiable {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(Message(senderID: Mock.me.id, body: .text(trimmed), time: Self.now()))
-        if trimmed.localizedCaseInsensitiveContains("@planner") {
+        if trimmed.localizedCaseInsensitiveContains("@planner") || trimmed.localizedCaseInsensitiveContains("@muse") {
             Task { await runPlanner(for: trimmed.lowercased()) }
         }
     }
 
-    /// Scripted stand-in for the real Muse Spark + SerpApi pipeline.
+    /// Muse answers from the plan's live searches and price watches. Without a backend, a scripted demo reply.
     private func runPlanner(for prompt: String) async {
+        if let api = HuddleAPI.configured {
+            withAnimation(Motion.smooth) { plannerStatus = "Muse is reading the plan…" }
+            let started = Date.now
+            let text: String
+            do {
+                text = try await api.ask(planID: id, question: prompt).text
+            } catch {
+                text = "I couldn't reach Muse just now (\(error.localizedDescription)). Try again in a minute."
+            }
+            let seconds = Date.now.timeIntervalSince(started)
+            withAnimation(Motion.smooth) {
+                plannerStatus = nil
+                steps.append(AgentStep(tool: "Answer in the thread", detail: prompt, engine: "Muse Spark", duration: seconds, credits: 1))
+                messages.append(Message(senderID: "planner", body: .planner(PlannerPost(
+                    text: text, trace: ["Muse Spark · \(seconds.formatted(.number.precision(.fractionLength(1))))s", "Live prices"]
+                )), time: Self.now()))
+            }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            return
+        }
         let script = kind == .trip ? tripScript(prompt) : carScript()
         try? await Task.sleep(for: .milliseconds(400))
         for step in script.steps {
@@ -157,18 +210,20 @@ final class AppModel {
         Plan(id: "japan", name: "Japan Trip 2027", kind: .trip, source: .whatsapp, chatName: "Japan crew",
              members: Mock.tripMembers, decisions: Mock.tripDecisions, nextStep: "Book flights by Friday",
              messages: Mock.tripMessages, options: Mock.tripOptions, itinerary: Mock.itinerary,
-             steps: Mock.tripSteps, sources: Mock.tripSources, unread: 2),
+             steps: Mock.tripSteps, sources: Mock.tripSources, unread: 2, tripQuery: Mock.japanQuery),
         Plan(id: "car", name: "Our next car", kind: .decision, source: .imessage, chatName: "Family",
              members: Mock.familyMembers, decisions: Mock.carDecisions, nextStep: "Book a dealer visit before July",
              messages: Mock.carMessages, leaseOptions: Mock.leaseOptions,
-             steps: Mock.carSteps, sources: Mock.carSources, unread: 1),
+             steps: Mock.carSteps, sources: Mock.carSources, unread: 1, watchRequest: Mock.carWatch),
     ]
 
-    enum AppTab: Hashable { case home, plans, shared, apps }
+    enum AppTab: Hashable { case home, plans, shared }
 
     /// Google account used for plan folders (simulated sign-in for now).
     var googleAccount: String?
     var workspaceService: WorkspaceService = WorkspaceServices.makeDefault()
+    /// Muse's price watch across every plan.
+    let priceWatch = PriceWatchCenter()
 
     /// Record that a folder was shared into the group's chat, the way the Planner's posts appear there.
     func shareWorkspace(of plan: Plan) {

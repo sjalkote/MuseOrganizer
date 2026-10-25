@@ -43,14 +43,30 @@ enum Mock {
     ]
 
     static let tripOptions: [BoardOption] = [
-        BoardOption(category: .flights, title: "ANA", detail: "AUS → HND · via LAX · 17h 40m", price: "$1,148", unit: "per person", tradeoff: "Cheapest with a sane layover. Lands at Haneda, 30 min to Shinjuku.", source: "Google Flights", fetched: "2 min ago", upVotes: 3, downVotes: 0, myVote: .up, isTopPick: true),
-        BoardOption(category: .flights, title: "JAL", detail: "AUS → NRT · via DFW · 16h 05m", price: "$1,312", unit: "per person", tradeoff: "Fastest, but Narita is 70 min from the city.", source: "Google Flights", fetched: "2 min ago", upVotes: 1, downVotes: 1),
+        BoardOption(category: .flights, title: "ANA", detail: "AUS → HND · via LAX · 17h 40m", price: "$1,148", unit: "per person", tradeoff: "Cheapest with a sane layover. Lands at Haneda, 30 min to Shinjuku.", source: "Google Flights", fetched: "2 min ago", upVotes: 3, downVotes: 0, myVote: .up, isTopPick: true, watchID: "demo-ana"),
+        BoardOption(category: .flights, title: "JAL", detail: "AUS → NRT · via DFW · 16h 05m", price: "$1,312", unit: "per person", tradeoff: "Fastest, but Narita is 70 min from the city.", source: "Google Flights", fetched: "2 min ago", upVotes: 1, downVotes: 1, watchID: "demo-jal"),
         BoardOption(category: .flights, title: "United", detail: "AUS → HND · via SFO · 18h 10m", price: "$1,089", unit: "per person", tradeoff: "Lowest fare, but leaves a day later.", source: "Google Flights", fetched: "3 min ago", upVotes: 0, downVotes: 2),
-        BoardOption(category: .stays, title: "Hotel Gracery Shinjuku", detail: "4.4 rating · 2 twin rooms · 5 nights", price: "$168", unit: "per room, night", tradeoff: "Central and walkable. Rooms are small.", source: "Google Hotels", fetched: "4 min ago", upVotes: 4, downVotes: 0, isTopPick: true),
-        BoardOption(category: .stays, title: "Kyoto Machiya House", detail: "4.8 rating · whole house · 3 nights", price: "$214", unit: "per night", tradeoff: "Traditional and roomy. 15 min walk to the station.", source: "Google Hotels", fetched: "4 min ago", upVotes: 4, downVotes: 0, isTopPick: true),
+        BoardOption(category: .stays, title: "Hotel Gracery Shinjuku", detail: "4.4 rating · 2 twin rooms · 5 nights", price: "$168", unit: "per room, night", tradeoff: "Central and walkable. Rooms are small.", source: "Google Hotels", fetched: "4 min ago", upVotes: 4, downVotes: 0, isTopPick: true, watchID: "demo-gracery"),
+        BoardOption(category: .stays, title: "Kyoto Machiya House", detail: "4.8 rating · whole house · 3 nights", price: "$214", unit: "per night", tradeoff: "Traditional and roomy. 15 min walk to the station.", source: "Google Hotels", fetched: "4 min ago", upVotes: 4, downVotes: 0, isTopPick: true, watchID: "demo-machiya"),
         BoardOption(category: .activities, title: "teamLab Planets", detail: "Toyosu · 2 hours", price: "$28", unit: "per person", tradeoff: "Timed entry. Book two weeks ahead.", source: "Google Search", fetched: "6 min ago", upVotes: 0, downVotes: 0),
         BoardOption(category: .activities, title: "Fushimi Inari at sunrise", detail: "Kyoto · 3 hour hike", price: "Free", unit: "", tradeoff: "No crowds, but a 6 AM start.", source: "Google Maps", fetched: "6 min ago", upVotes: 0, downVotes: 0),
     ]
+
+    /// What the backend searches for the Japan trip (backend/huddle/board.py).
+    static let japanQuery = TripQuery(
+        travelers: 4, budgetPerPerson: 2500,
+        flights: [.init(from: "AUS", to: "HND", depart: "2027-03-26", return: "2027-04-04")],
+        stays: [.init(area: "Shinjuku", checkIn: "2027-03-26", checkOut: "2027-03-30", rooms: 2),
+                .init(area: "Kyoto Higashiyama", checkIn: "2027-03-30", checkOut: "2027-04-02", rooms: 1)],
+        activities: ["top things to do, Tokyo", "top things to do, Kyoto"]
+    )
+
+    /// The car plan watches used RAV4 listings against the buyout price.
+    static let carWatch = WatchRequest(
+        category: "car", label: "Used RAV4 XLE near Austin", engine: "google_shopping",
+        params: ["q": "2023 Toyota RAV4 XLE, ~37k mi, Austin"],
+        detail: "2023 · about 37k miles · cheapest listing", unit: "per car"
+    )
 
     static let itinerary: [ItineraryDay] = [
         ItineraryDay(day: 1, date: "Thu, Mar 26", city: "Tokyo", slots: [
