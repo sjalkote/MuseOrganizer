@@ -26,14 +26,39 @@ def _synthetic(params):
         q = params["q"]
         return {"organic_results": [
             {"title": f"{q} | {site} (mock)", "link": f"https://www.{site}/search?q={q.replace(' ', '+')}",
-             "snippet": "Mock listing result. Add SERPAPI_API_KEY for live results."}
+             "snippet": "Mock result: from $95, rates from 5.9% APR. Add SERPAPI_API_KEY for live results."}
             for site in ("cars.com", "autotrader.com", "toyota.com")
         ]}
     if engine == "google_maps":
         return {"local_results": [
-            {"title": f"{params['q']} #{i} (mock)", "address": f"{100 * i} Main St, {params.get('location', '')}",
-             "rating": 4.5, "gps_coordinates": {"latitude": 30.27 + i / 100, "longitude": -97.74}}
+            {"title": f"{params['q']} #{i} (mock)", "address": f"{100 * i} Main St, {params.get('location', '')}".rstrip(", "),
+             "rating": 4.5, "price": "$$", "type": "Restaurant", "gps_coordinates": {"latitude": 30.27 + i / 100, "longitude": -97.74}}
             for i in (1, 2, 3)
+        ]}
+    if engine == "google_flights":
+        adults = int(params.get("adults", 1))
+        dep, arr, day = params["departure_id"], params["arrival_id"], params["outbound_date"]
+        legs = [
+            {"airline": "ANA (mock)", "flight_number": "NH 7", "departure_airport": {"id": dep, "time": f"{day} 06:10"},
+             "arrival_airport": {"id": "LAX", "time": f"{day} 07:45"}},
+            {"airline": "ANA (mock)", "flight_number": "NH 107", "departure_airport": {"id": "LAX", "time": f"{day} 10:30"},
+             "arrival_airport": {"id": arr, "time": f"{day} 15:40"}},
+        ]
+        return {"best_flights": [{"flights": legs, "layovers": [{"id": "LAX"}], "price": 1148 * adults}],
+                "other_flights": [{"flights": legs, "layovers": [{"id": "LAX"}], "price": (1190 + 40 * i) * adults}
+                                  for i in range(13)]}
+    if engine == "google_hotels":
+        area = params["q"].removesuffix(" hotels")
+        return {"properties": [
+            {"name": f"{area} {kind} (mock)", "overall_rating": rating,
+             "rate_per_night": {"lowest": f"${rate}", "extracted_lowest": rate}}
+            for kind, rating, rate in [("Central Hotel", 4.4, 168), ("Garden Inn", 4.6, 214), ("Station Hostel", 4.1, 62)]
+        ]}
+    if engine == "google_shopping":
+        return {"shopping_results": [
+            {"title": f"{params['q'].split(',')[0]} · {34100 + 900 * i:,} mi (mock)", "source": "cars.com",
+             "extracted_price": 27495 + 350 * i, "price": f"${27495 + 350 * i:,}"}
+            for i in range(6)
         ]}
     raise KeyError(f"no mock for engine {engine}")
 

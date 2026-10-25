@@ -168,7 +168,7 @@ final class AppModel {
 
     /// Google account used for plan folders (simulated sign-in for now).
     var googleAccount: String?
-    var workspaceService: WorkspaceService = SimulatedWorkspaceService()
+    var workspaceService: WorkspaceService = WorkspaceServices.makeDefault()
 
     /// Record that a folder was shared into the group's chat, the way the Planner's posts appear there.
     func shareWorkspace(of plan: Plan) {

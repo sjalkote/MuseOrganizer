@@ -15,11 +15,12 @@ import sqlite3
 import threading
 import uuid
 
+import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
-from . import engine
+from . import engine, google, workspace
 from .templates import TEMPLATES
 
 app = FastAPI(title="Huddle")
@@ -30,6 +31,7 @@ LOCK = threading.Lock()
 
 with sqlite3.connect(DB) as _c:
     _c.execute("create table if not exists sessions (id text primary key, data text not null)")
+    _c.execute("create table if not exists google_tokens (account text primary key, refresh_token text not null)")
 
 
 def _save(s):
@@ -209,3 +211,126 @@ def vote(sid: str, mid: str, body: Vote):
             raise HTTPException(409, str(e))
         _save(s)
     return state(sid, mid)
+
+
+# MARK: - Plan folders (docs/GOOGLE_WORKSPACE_SETUP.md)
+# ponytail: one Google account per backend ("default"); key tokens by user once the app has accounts.
+
+
+def _refresh_token():
+    with sqlite3.connect(DB) as c:
+        row = c.execute("select refresh_token from google_tokens where account = 'default'").fetchone()
+    return row[0] if row else None
+
+
+def _store_token(code, redirect_uri=google.REDIRECT_URI):
+    if not google.configured():
+        raise HTTPException(503, "set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the backend first")
+    try:
+        token = google.exchange(code, redirect_uri)
+    except (httpx.HTTPError, ValueError) as e:
+        raise HTTPException(400, f"Google sign-in failed: {e}")
+    with sqlite3.connect(DB) as c:
+        c.execute("insert or replace into google_tokens values ('default', ?)", (token,))
+
+
+class BuildCall(BaseModel):
+    id: str
+    engine: str
+    query: str
+    params: dict[str, str] = {}
+
+
+class BuildFile(BaseModel):
+    id: str
+    name: str
+    kind: str
+    summary: str = ""
+    sources: list[str] = []
+    content: dict | None = None  # {columns, rows, footer} or {blocks: [{type, text}]}; used when we can't research it
+
+
+class BuildPlan(BaseModel):
+    folderName: str
+    kind: str = "trip"
+    members: list[str] = []
+    context: dict[str, str] = {}
+    calls: list[BuildCall] = []
+    files: list[BuildFile] = []
+
+
+class AuthCode(BaseModel):
+    serverAuthCode: str
+
+
+@app.post("/plans/{pid}/workspace", status_code=202)
+def build_workspace(pid: str, body: BuildPlan):
+    """Start building the plan's Drive folder. Without Google credentials it writes to fixtures/drive/ instead."""
+    if google.configured():
+        token = _refresh_token()
+        if not token:
+            raise HTTPException(409, "Google Drive isn't connected yet: open /auth/google/start")
+        make = lambda: google.Drive(token)
+    else:
+        make = workspace.MockDrive
+    b = workspace.start({"planId": pid, **body.model_dump()}, make)
+    return {"buildId": b.id, "mode": "google" if google.configured() else "mock"}
+
+
+@app.get("/builds/{bid}/events")
+async def build_events(bid: str, request: Request):
+    """Replays the build's events from the start, then follows it until it ends."""
+    b = workspace.BUILDS.get(bid)
+    if not b:
+        raise HTTPException(404, "no such build")
+
+    async def stream():
+        sent = 0
+        while not await request.is_disconnected():
+            done = b.done
+            for kind, data in b.events[sent:]:
+                sent += 1
+                yield f"event: {kind}\ndata: {json.dumps(data)}\n\n"
+            if done and sent == len(b.events):
+                return
+            await asyncio.sleep(0.1)
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.delete("/builds/{bid}")
+def cancel_build(bid: str):
+    """Stop a build; anything it already wrote to Drive is deleted."""
+    b = workspace.BUILDS.get(bid)
+    if not b:
+        raise HTTPException(404, "no such build")
+    b.cancelled = True
+    return {"cancelled": not b.done}
+
+
+@app.get("/auth/google/status")
+def google_status():
+    return {"mode": "google" if google.configured() else "mock", "configured": google.configured(),
+            "connected": bool(_refresh_token())}
+
+
+@app.get("/auth/google/start")
+def google_start():
+    """Browser sign-in for the demo; the app can instead send its serverAuthCode to /auth/google/code."""
+    if not google.configured():
+        raise HTTPException(503, "set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the backend first")
+    return RedirectResponse(google.consent_url())
+
+
+@app.get("/auth/google/callback")
+def google_callback(code: str = "", error: str = ""):
+    if error or not code:
+        raise HTTPException(400, f"Google sign-in failed: {error or 'no code'}")
+    _store_token(code)
+    return HTMLResponse("<p>Google Drive is connected to Huddle. You can close this tab.</p>")
+
+
+@app.post("/auth/google/code")
+def google_code(body: AuthCode):
+    _store_token(body.serverAuthCode, redirect_uri="")
+    return google_status()

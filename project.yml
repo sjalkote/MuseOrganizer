@@ -31,12 +31,18 @@ targets:
       path: Config/Huddle-Info.plist
       properties:
         LSApplicationQueriesSchemes: [whatsapp, instagram, sms]
+        # Plan folders use the Huddle backend when this is set (docs/GOOGLE_WORKSPACE_SETUP.md).
+        HUDDLE_BACKEND_URL: $(HUDDLE_BACKEND_URL)
+        # Plain http to localhost / the Mac's LAN address while developing.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         CFBundleURLTypes:
           - CFBundleURLName: com.sjalkote.huddle
             CFBundleURLSchemes: [huddle]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sjalkote.MuseOrganizer
+        HUDDLE_BACKEND_URL: ""
         PRODUCT_NAME: MuseOrganizer
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"

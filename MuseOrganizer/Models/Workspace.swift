@@ -77,11 +77,20 @@ struct WorkspaceBlueprint {
     var folderName: String
     var calls: [ResearchCall]
     var files: [WorkspaceFile]
+    /// Facts the backend can't search for (budget, buyout price, the group's pick).
+    var context: [String: String] = [:]
+    var planID = ""
+    var members: [String] = []
 }
 
 extension Mock {
     static func blueprint(for plan: Plan) -> WorkspaceBlueprint {
-        plan.kind == .trip ? tripBlueprint : carBlueprint
+        var blueprint = plan.kind == .trip ? tripBlueprint : carBlueprint
+        blueprint.planID = plan.id
+        blueprint.members = plan.members.map(\.name)
+        blueprint.context["planName"] = plan.name
+        blueprint.context["kind"] = plan.kind == .trip ? "trip" : "decision"
+        return blueprint
     }
 
     // MARK: Trip
@@ -150,7 +159,8 @@ extension Mock {
                     .bullet("Gion Kappa · 4.4 · casual izakaya, reserve for 4"),
                 ])
             ),
-        ]
+        ],
+        context: ["year": "2027", "budgetPerPerson": "2500"]
     )
 
     // MARK: Car
@@ -215,6 +225,7 @@ extension Mock {
                     .paragraph("Simulated account data."),
                 ])
             ),
-        ]
+        ],
+        context: ["buyoutPrice": "24180", "decision": "buy out the RAV4", "votes": "Three of four of us voted for it."]
     )
 }
